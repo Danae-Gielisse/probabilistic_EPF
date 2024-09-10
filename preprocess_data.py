@@ -31,11 +31,38 @@ day_ahead_prices = day_ahead_prices.drop(columns=["datetime"])
 day_ahead_prices = day_ahead_prices.rename(columns={"Day-ahead Price [EUR/MWh]": "price"})
 day_ahead_prices = day_ahead_prices[['date', 'hour', 'price']]
 
-# Definieer het pad waar het gecombineerde bestand moet worden opgeslagen in de Data map
+# save preprocessed price data
 output_path = os.path.join(processed_data_folder, 'prices.csv')
-
-# Sla het gecombineerde dataframe op als een nieuwe CSV in de Data map
 day_ahead_prices.to_csv(output_path, index=False)
+
+### create total load dataframe ###
+# read raw data
+file_path = os.path.join(raw_data_folder, "Total Load - Day Ahead _ Actual_2015-2024.csv")
+total_load = pd.read_csv(file_path)
+
+# split datetime in date and hour column
+total_load['start_datetime'] = pd.to_datetime(total_load['start_datetime'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
+total_load['date'] = total_load['start_datetime'].dt.strftime('%d-%m-%Y')
+total_load['hour'] = total_load['start_datetime'].dt.hour
+total_load = total_load.drop(columns=['start_datetime'])
+
+# rename columns and rearrange dataframe
+total_load = total_load.rename(columns={'Day-ahead Total Load Forecast [MW] - BZN|NL': 'load_forecast',
+                                        'Actual Total Load [MW] - BZN|NL': 'actual_load'})
+total_load = total_load[["date", "hour", "load_forecast", "actual_load"]]
+
+# create new df with hourly load
+total_load['block'] = (total_load['hour'] != total_load['hour'].shift()).cumsum()
+hourly_load_data = total_load.groupby('block').agg({
+    'date': 'first',  # Neem de eerste waarde van 'date' van elk blok
+    'hour': 'first',  # Neem het eerste uur van elk blok
+    'load_forecast': 'sum',
+    'actual_load': 'sum'
+}).reset_index(drop=True)
+
+# save total load dataframe
+output_path = os.path.join(processed_data_folder, 'load.csv')
+hourly_load_data.to_csv(output_path, index=False)
 
 
 
