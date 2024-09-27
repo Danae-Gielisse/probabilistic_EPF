@@ -6,12 +6,13 @@ import numpy as np
 # paths to data folders
 raw_data_folder = 'Data/raw data'
 processed_data_folder = 'Data/processed data'
+day_ahead_NL_folder = 'Data/raw data/Day-ahead prices NL'
 
 # create a list of the dataframes for the different years
 dataframes = []
-for filename in sorted(os.listdir(raw_data_folder)):
+for filename in sorted(os.listdir(day_ahead_NL_folder)):
     if filename.startswith('Day-ahead_Prices_') and filename.endswith('.csv'):
-        file_path = os.path.join(raw_data_folder, filename)
+        file_path = os.path.join(day_ahead_NL_folder, filename)
         df = pd.read_csv(file_path)
         dataframes.append(df)
 
@@ -20,8 +21,10 @@ day_ahead_prices = pd.concat(dataframes, ignore_index=True)
 # delete columns "Currency" en "BZN|NL" from the datadrame
 day_ahead_prices = day_ahead_prices.drop(columns=["Currency", "BZN|NL"], errors='ignore')
 
-# create date and hour column
+# create date and hour column and interpolate missing prices
 day_ahead_prices['date'] = day_ahead_prices['MTU (CET/CEST)'].str.split(' - ').str[0]
+day_ahead_prices['Day-ahead Price [EUR/MWh]'] = pd.to_numeric(day_ahead_prices['Day-ahead Price [EUR/MWh]'], errors='coerce')
+day_ahead_prices['Day-ahead Price [EUR/MWh]'] = day_ahead_prices['Day-ahead Price [EUR/MWh]'].interpolate(method='linear')
 day_ahead_prices['datetime'] = pd.to_datetime(day_ahead_prices['date'], format='%d.%m.%Y %H:%M', errors='coerce')
 day_ahead_prices = day_ahead_prices.drop(columns=['MTU (CET/CEST)'])
 day_ahead_prices['date'] = day_ahead_prices['datetime'].dt.strftime('%d-%m-%Y')
@@ -30,6 +33,17 @@ day_ahead_prices['hour'] = day_ahead_prices['datetime'].dt.hour
 # change name column and rearrange columns
 day_ahead_prices = day_ahead_prices.rename(columns={"Day-ahead Price [EUR/MWh]": "price"})
 day_ahead_prices = day_ahead_prices[['datetime', 'date', 'hour', 'price']]
+
+# create list with duplicated datetimes (switch from summer time to winter time)
+duplicated_datetimes = day_ahead_prices[day_ahead_prices.duplicated(subset='datetime', keep=False)]
+duplicated_datetime_list = duplicated_datetimes['datetime'].unique().tolist()
+
+# take mean of the price for switch from summer time to winter time
+day_ahead_prices = day_ahead_prices.groupby('datetime', as_index=False).agg({
+    'price': 'mean',
+    'date': 'first',
+    'hour': 'first'
+})
 
 # save preprocessed price data
 output_path = os.path.join(processed_data_folder, 'prices.csv')
@@ -45,6 +59,9 @@ total_load['start_datetime'] = pd.to_datetime(total_load['start_datetime'], form
 total_load['date'] = total_load['start_datetime'].dt.strftime('%d-%m-%Y')
 total_load['hour'] = total_load['start_datetime'].dt.hour
 
+# drop rows with datetime before January 1, 2016
+total_load = total_load[total_load['start_datetime'] >= '2016-01-01']
+
 # rename columns and rearrange dataframe
 total_load = total_load.rename(columns={'Day-ahead Total Load Forecast [MW] - BZN|NL': 'load_forecast',
                                         'Actual Total Load [MW] - BZN|NL': 'actual_load'})
@@ -53,32 +70,32 @@ total_load = total_load[["start_datetime", "date", "hour", "load_forecast", "act
 # create new df with hourly load
 total_load['block'] = (total_load['hour'] != total_load['hour'].shift()).cumsum()
 hourly_load_data = total_load.groupby('block').agg({
-    'date': 'first',  # Neem de eerste waarde van 'date' van elk blok
-    'hour': 'first',  # Neem het eerste uur van elk blok
+    'date': 'first',
+    'hour': 'first',
     'load_forecast': 'sum',
     'actual_load': 'sum'
 }).reset_index(drop=True)
 hourly_load_data['date'] = pd.to_datetime(hourly_load_data['date'], format='%d-%m-%Y')
 
-# Stap 2: Maak een nieuwe 'Datetime' kolom door de 'Hour' kolom toe te voegen aan de 'Date' kolom
+# ensure proper transition from winter time to summer time
+hourly_load_data['load_forecast'] = hourly_load_data['load_forecast'].replace(0, pd.NA)
+hourly_load_data['actual_load'] = hourly_load_data['actual_load'].replace(0, pd.NA)
+hourly_load_data['load_forecast'] = pd.to_numeric(hourly_load_data['load_forecast'], errors='coerce')
+hourly_load_data['actual_load'] = pd.to_numeric(hourly_load_data['actual_load'], errors='coerce')
+hourly_load_data['load_forecast'] = hourly_load_data['load_forecast'].interpolate(method='linear')
+hourly_load_data['actual_load'] = hourly_load_data['actual_load'].interpolate(method='linear')
+
+# add datetime column
 hourly_load_data['datetime'] = hourly_load_data['date'] + pd.to_timedelta(hourly_load_data['hour'], unit='h')
+
+# Ensure proper transition from winter time to summer time
+for dt in duplicated_datetime_list:
+    hourly_load_data.loc[hourly_load_data['datetime'] == dt, 'load_forecast'] /= 2
+    hourly_load_data.loc[hourly_load_data['datetime'] == dt, 'actual_load'] /= 2
 
 # save total load dataframe
 output_path = os.path.join(processed_data_folder, 'load.csv')
 hourly_load_data.to_csv(output_path, index=False)
-
-### create total production dataframe ###
-file_path = os.path.join(raw_data_folder, "Total_production_ned_2016-2024.csv")
-total_production = pd.read_csv(file_path)
-
-# create datetime column
-total_production = total_production[["ValidFrom", "Volume"]]
-total_production['datetime'] = pd.to_datetime(total_production['ValidFrom']).dt.tz_localize(None)
-total_production = total_production.drop(columns=['ValidFrom'])
-
-# save total production dataframe
-output_path = os.path.join(processed_data_folder, 'production.csv')
-total_production.to_csv(output_path, index=False)
 
 ### create dataframe TTF gas ###
 file_path = os.path.join(raw_data_folder, "TTF Gas (EUR:MWh) 2016-2024.csv")
@@ -161,7 +178,7 @@ API2_coal = merged_full
 output_path = os.path.join(processed_data_folder, 'API2_coal.csv')
 API2_coal.to_csv(output_path, index=False)
 
-### create dataframe for Brent Oil
+### create dataframe for Brent Oil ###
 # read the brent oil data and the exchange data
 file_path = os.path.join(raw_data_folder, "Brent Oil (USD:bbL) 2016-2024.xlsx")
 brent_oil = pd.read_excel(file_path)
@@ -190,6 +207,61 @@ brent_oil = merged_full
 # save API2 Coal dataframe
 output_path = os.path.join(processed_data_folder, 'brent_oil.csv')
 brent_oil.to_csv(output_path, index=False)
+
+### create dataframe for wind and solar production ###
+wind_and_solar_folder = 'Data/raw data/Wind and solar generation'
+# create wind and solar dataframe with day ahead forecasts for solar, wind offshore and wind onshore
+dataframes = []
+for filename in sorted(os.listdir(wind_and_solar_folder)):
+    if filename.startswith('Wind and solar generation forecasts') and filename.endswith('.csv'):
+        file_path = os.path.join(wind_and_solar_folder, filename)
+        df = pd.read_csv(file_path)
+        dataframes.append(df)
+wind_and_solar = pd.concat(dataframes, ignore_index=True)
+columns_to_keep = [
+    'MTU (CET/CEST)',
+    'Generation - Solar  [MW] Day Ahead/ BZN|NL',
+    'Generation - Wind Offshore  [MW] Day Ahead/ BZN|NL',
+    'Generation - Wind Onshore  [MW] Day Ahead/ BZN|NL'
+]
+wind_and_solar = wind_and_solar[columns_to_keep]
+# rename columns
+wind_and_solar.columns = ['datetime', 'solar', 'wind_offshore', 'wind_onshore']
+
+# create datetime, date and hour
+wind_and_solar['datetime'] = wind_and_solar['datetime'].str.split(' - ').str[0]
+wind_and_solar['datetime'] = pd.to_datetime(wind_and_solar['datetime'], format='%d.%m.%Y %H:%M')
+wind_and_solar['date'] = wind_and_solar['datetime'].dt.strftime('%d-%m-%Y')
+wind_and_solar['hour'] = wind_and_solar['datetime'].dt.hour
+
+# sum up to total generation
+wind_and_solar["total_generation"] = wind_and_solar["solar"] + wind_and_solar["wind_onshore"] + wind_and_solar["wind_offshore"]
+wind_and_solar = wind_and_solar.drop(columns=['solar', 'wind_onshore', 'wind_offshore'])
+
+# create hourly dataframe
+wind_and_solar['block'] = (wind_and_solar['hour'] != wind_and_solar['hour'].shift()).cumsum()
+hourly_generation_data = wind_and_solar.groupby('block').agg({
+    'date': 'first',
+    'hour': 'first',
+    'total_generation': 'sum',
+}).reset_index(drop=True)
+hourly_generation_data['date'] = pd.to_datetime(hourly_generation_data['date'], format='%d-%m-%Y')
+
+# Ensure proper transition from winter time to summer time
+hourly_generation_data['total_generation'] = hourly_generation_data['total_generation'].replace(0, pd.NA)
+hourly_generation_data['total_generation'] = pd.to_numeric(hourly_generation_data['total_generation'], errors='coerce')
+hourly_generation_data['total_generation'] = hourly_generation_data['total_generation'].interpolate(method='linear')
+
+# add datetime column
+hourly_generation_data['datetime'] = hourly_generation_data['date'] + pd.to_timedelta(hourly_generation_data['hour'], unit='h')
+
+# ensure proper transition from summer time to winter time
+for dt in duplicated_datetime_list:
+    hourly_generation_data.loc[hourly_generation_data['datetime'] == dt, 'total_generation'] /= 2
+
+# save total load dataframe
+output_path = os.path.join(processed_data_folder, 'generation.csv')
+hourly_generation_data.to_csv(output_path, index=False)
 
 
 test = 5
