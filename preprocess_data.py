@@ -45,6 +45,10 @@ day_ahead_prices = day_ahead_prices.groupby('datetime', as_index=False).agg({
     'hour': 'first'
 })
 
+# filter data before 28 september 2024
+day_ahead_prices['datetime'] = pd.to_datetime(day_ahead_prices['datetime'], errors='coerce')
+day_ahead_prices = day_ahead_prices[day_ahead_prices['datetime'] < '2024-09-28']
+
 # save preprocessed price data
 output_path = os.path.join(processed_data_folder, 'prices.csv')
 day_ahead_prices.to_csv(output_path, index=False)
@@ -53,23 +57,35 @@ day_ahead_prices.to_csv(output_path, index=False)
 # read raw data
 file_path = os.path.join(raw_data_folder, "Total Load - Day Ahead _ Actual_2015-2024.csv")
 total_load = pd.read_csv(file_path)
+load_NL_folder = os.path.join(raw_data_folder, "Load NL")
 
-# split datetime in date and hour column
-total_load['start_datetime'] = pd.to_datetime(total_load['start_datetime'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
-total_load['date'] = total_load['start_datetime'].dt.strftime('%d-%m-%Y')
-total_load['hour'] = total_load['start_datetime'].dt.hour
+# create a list of the dataframes for the different years
+dataframes = []
+for filename in sorted(os.listdir(load_NL_folder)):
+    if filename.startswith('Load forecast') and filename.endswith('.csv'):
+        file_path = os.path.join(load_NL_folder, filename)
+        df = pd.read_csv(file_path)
+        dataframes.append(df)
 
-# drop rows with datetime before January 1, 2016
-total_load = total_load[total_load['start_datetime'] >= '2016-01-01']
+# concatenate dataframe list to one dataframe and split to date and hour
+load = pd.concat(dataframes, ignore_index=True)
+load['date'] = load['Time (CET/CEST)'].str.split(' - ').str[0]
+load['datetime'] = pd.to_datetime(load['date'], format='%d.%m.%Y %H:%M', errors='coerce')
+load['hour'] = load['datetime'].dt.hour
+load = load.drop(columns=['Time (CET/CEST)'])
+load['date'] = load['datetime'].dt.strftime('%d-%m-%Y')
+
+# drop rows with datetime before January 1, 2016=
+load = load[load['datetime'] >= '2016-01-01']
 
 # rename columns and rearrange dataframe
-total_load = total_load.rename(columns={'Day-ahead Total Load Forecast [MW] - BZN|NL': 'load_forecast',
+load = load.rename(columns={'Day-ahead Total Load Forecast [MW] - BZN|NL': 'load_forecast',
                                         'Actual Total Load [MW] - BZN|NL': 'actual_load'})
-total_load = total_load[["start_datetime", "date", "hour", "load_forecast", "actual_load"]]
+load = load[["datetime", "date", "hour", "load_forecast", "actual_load"]]
 
 # create new df with hourly load
-total_load['block'] = (total_load['hour'] != total_load['hour'].shift()).cumsum()
-hourly_load_data = total_load.groupby('block').agg({
+load['block'] = (load['hour'] != load['hour'].shift()).cumsum()
+hourly_load_data = load.groupby('block').agg({
     'date': 'first',
     'hour': 'first',
     'load_forecast': 'sum',
@@ -234,6 +250,14 @@ wind_and_solar['datetime'] = pd.to_datetime(wind_and_solar['datetime'], format='
 wind_and_solar['date'] = wind_and_solar['datetime'].dt.strftime('%d-%m-%Y')
 wind_and_solar['hour'] = wind_and_solar['datetime'].dt.hour
 
+# set columns to numeric type
+wind_and_solar['wind_onshore'] = pd.to_numeric(wind_and_solar['wind_onshore'], errors='coerce')
+wind_and_solar['solar'] = pd.to_numeric(wind_and_solar['solar'], errors='coerce')
+wind_and_solar['wind_offshore'] = pd.to_numeric(wind_and_solar['wind_offshore'], errors='coerce')
+
+# filter to data before 28 september 2024
+wind_and_solar = wind_and_solar[wind_and_solar['datetime'] < '2024-09-28']
+
 # sum up to total generation
 wind_and_solar["total_generation"] = wind_and_solar["solar"] + wind_and_solar["wind_onshore"] + wind_and_solar["wind_offshore"]
 wind_and_solar = wind_and_solar.drop(columns=['solar', 'wind_onshore', 'wind_offshore'])
@@ -259,7 +283,7 @@ hourly_generation_data['datetime'] = hourly_generation_data['date'] + pd.to_time
 for dt in duplicated_datetime_list:
     hourly_generation_data.loc[hourly_generation_data['datetime'] == dt, 'total_generation'] /= 2
 
-# save total load dataframe
+# save total generation dataframe
 output_path = os.path.join(processed_data_folder, 'generation.csv')
 hourly_generation_data.to_csv(output_path, index=False)
 
