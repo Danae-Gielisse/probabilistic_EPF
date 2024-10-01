@@ -55,8 +55,6 @@ day_ahead_prices.to_csv(output_path, index=False)
 
 ### create total load dataframe ###
 # read raw data
-file_path = os.path.join(raw_data_folder, "Total Load - Day Ahead _ Actual_2015-2024.csv")
-total_load = pd.read_csv(file_path)
 load_NL_folder = os.path.join(raw_data_folder, "Load NL")
 
 # create a list of the dataframes for the different years
@@ -226,7 +224,7 @@ merged_full['Datetime'] = merged_full['Date'] + pd.to_timedelta(merged_full['Hou
 merged_full.drop(columns=['Date', 'Hour'], inplace=True)
 brent_oil = merged_full
 
-# save API2 Coal dataframe
+# save brent oil dataframe
 output_path = os.path.join(processed_data_folder, 'brent_oil.csv')
 brent_oil.to_csv(output_path, index=False)
 
@@ -293,7 +291,35 @@ for dt in duplicated_datetime_list:
 output_path = os.path.join(processed_data_folder, 'generation.csv')
 hourly_generation_data.to_csv(output_path, index=False)
 
+### create dataframe with all data ###
+# change datetime name
+API2_coal.rename(columns={'Datetime': 'datetime'}, inplace=True)
+ttf_gas.rename(columns={'Datetime': 'datetime'}, inplace=True)
+brent_oil.rename(columns={'Datetime': 'datetime'}, inplace=True)
+EUA.rename(columns={'Datetime': 'datetime'}, inplace=True)
 
-test = 5
+# choose relevant columns
+day_ahead_prices = day_ahead_prices[['datetime', 'price']]
+hourly_load_data = hourly_load_data[['datetime', 'load_forecast']]
+hourly_generation_data = hourly_generation_data[['datetime', 'total_generation']]
+API2_coal = API2_coal[['datetime', 'Price']].rename(columns={'Price': 'API2_coal_price'})
+ttf_gas = ttf_gas[['datetime', 'Price']].rename(columns={'Price': 'ttf_gas_price'})
+brent_oil = brent_oil[['datetime', 'Price']].rename(columns={'Price': 'brent_oil_price'})
+EUA = EUA[['datetime', 'Price']].rename(columns={'Price': 'EUA_price'})
+
+# merge dfs
+merged_df = day_ahead_prices.merge(hourly_load_data, on='datetime', how='outer')
+merged_df = merged_df.merge(hourly_generation_data, on='datetime', how='outer')
+merged_df = merged_df.merge(API2_coal, on='datetime', how='outer')
+merged_df = merged_df.merge(ttf_gas, on='datetime', how='outer')
+merged_df = merged_df.merge(brent_oil, on='datetime', how='outer')
+merged_df = merged_df.merge(EUA, on='datetime', how='outer')
+
+# filter on the correct data
+merged_df = merged_df[(merged_df['datetime'] >= '2016-01-01') & (merged_df['datetime'] <= '2024-08-31')]
+
+# save merged dataframe
+output_path = os.path.join(processed_data_folder, 'data.csv')
+merged_df.to_csv(output_path, index=False)
 
 
