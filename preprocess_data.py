@@ -38,7 +38,7 @@ day_ahead_prices = day_ahead_prices[['datetime', 'date', 'hour', 'price']]
 duplicated_datetimes = day_ahead_prices[day_ahead_prices.duplicated(subset='datetime', keep=False)]
 duplicated_datetime_list = duplicated_datetimes['datetime'].unique().tolist()
 
-# take mean of the price for switch from summer time to winter time
+# take mean of the price for switch from winter time to summer time
 day_ahead_prices = day_ahead_prices.groupby('datetime', as_index=False).agg({
     'price': 'mean',
     'date': 'first',
@@ -75,13 +75,18 @@ load['hour'] = load['datetime'].dt.hour
 load = load.drop(columns=['Time (CET/CEST)'])
 load['date'] = load['datetime'].dt.strftime('%d-%m-%Y')
 
-# drop rows with datetime before January 1, 2016=
+# drop rows with datetime before January 1, 2016 and after September 28, 2024
 load = load[load['datetime'] >= '2016-01-01']
+load = load[load['datetime'] < '2024-09-28']
 
 # rename columns and rearrange dataframe
 load = load.rename(columns={'Day-ahead Total Load Forecast [MW] - BZN|NL': 'load_forecast',
                                         'Actual Total Load [MW] - BZN|NL': 'actual_load'})
 load = load[["datetime", "date", "hour", "load_forecast", "actual_load"]]
+
+# set columns to numeric type
+load['load_forecast'] = pd.to_numeric(load['load_forecast'], errors='coerce')
+load['actual_load'] = pd.to_numeric(load['actual_load'], errors='coerce')
 
 # create new df with hourly load
 load['block'] = (load['hour'] != load['hour'].shift()).cumsum()
@@ -135,6 +140,7 @@ full_ttf_gas['Date'] = full_ttf_gas['Date'] + pd.to_timedelta(full_ttf_gas['Hour
 full_ttf_gas = full_ttf_gas.drop(columns=['Hour'])
 # sort dates in ascending order
 full_ttf_gas = full_ttf_gas.sort_values('Date').reset_index(drop=True)
+full_ttf_gas = full_ttf_gas.rename(columns={'Date': 'Datetime'})
 ttf_gas = full_ttf_gas
 
 # save TTF gas dataframe
