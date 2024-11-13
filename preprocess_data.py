@@ -2,10 +2,10 @@
 Preprocessing of the data, obtains a data frame with the data ready to be used by the methods
 """
 
-
 import os
 import pandas as pd
 import numpy as np
+
 
 ### create prices dataframe ###
 # paths to data folders
@@ -60,6 +60,7 @@ day_ahead_prices = day_ahead_prices[day_ahead_prices['datetime'] < '2024-09-28']
 # save preprocessed price data
 output_path = os.path.join(processed_data_folder, 'prices.csv')
 day_ahead_prices.to_csv(output_path, index=False)
+
 
 ### create total load dataframe ###
 # read raw data
@@ -125,6 +126,7 @@ for dt in duplicated_datetime_list:
 output_path = os.path.join(processed_data_folder, 'load.csv')
 hourly_load_data.to_csv(output_path, index=False)
 
+
 ### create dataframe TTF gas ###
 file_path = os.path.join(raw_data_folder, "TTF Gas (EUR:MWh) 2016-2024.csv")
 ttf_gas = pd.read_csv(file_path)
@@ -154,6 +156,7 @@ ttf_gas = full_ttf_gas
 output_path = os.path.join(processed_data_folder, 'ttf_gas.csv')
 ttf_gas.to_csv(output_path, index=False)
 
+
 ### create dataframe EUA ###
 file_path = os.path.join(raw_data_folder, "EUA (EUR:tCO2) 2016-2024.xlsx")
 EUA = pd.read_excel(file_path)
@@ -173,6 +176,7 @@ EUA = EUA_full
 # save EUA gas dataframe
 output_path = os.path.join(processed_data_folder, 'EUA.csv')
 EUA.to_csv(output_path, index=False)
+
 
 ### create dataframe API2 coal ###
 # read the API2 coal data and the exchange data
@@ -279,7 +283,8 @@ for dt in duplicated_datetime_list:
     hourly_generation_data.loc[hourly_generation_data['datetime'] == dt, 'solar'] /= 2
     hourly_generation_data.loc[hourly_generation_data['datetime'] == dt, 'total_wind'] /= 2
 
-### create dataframe for actual wind and solar generation
+
+### create dataframe for actual wind and solar generation ###
 actual_generation_folder = 'Data/raw data/Actual generation'
 # create wind and solar dataframe with day ahead forecasts for solar, wind offshore and wind onshore
 dataframes = []
@@ -409,7 +414,6 @@ wind_onshore['wind_onshore_ned'] = wind_onshore['wind_onshore_ned'] / 1000
 # create datetime, date and hour
 wind_onshore['datetime'] = pd.to_datetime(wind_onshore['datetime'])
 wind_onshore = wind_onshore.iloc[1:].reset_index(drop=True) # delete the first column
-
 
 # create wind offshore dataframe
 dataframes = []
