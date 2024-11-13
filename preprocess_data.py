@@ -24,8 +24,11 @@ day_ahead_prices = day_ahead_prices.drop(columns=["Currency", "BZN|NL"], errors=
 # create date and hour column and interpolate missing prices
 day_ahead_prices['date'] = day_ahead_prices['MTU (CET/CEST)'].str.split(' - ').str[0]
 day_ahead_prices['Day-ahead Price [EUR/MWh]'] = pd.to_numeric(day_ahead_prices['Day-ahead Price [EUR/MWh]'], errors='coerce')
-day_ahead_prices['Day-ahead Price [EUR/MWh]'] = day_ahead_prices['Day-ahead Price [EUR/MWh]'].interpolate(method='linear')
 day_ahead_prices['datetime'] = pd.to_datetime(day_ahead_prices['date'], format='%d.%m.%Y %H:%M', errors='coerce')
+day_ahead_prices = day_ahead_prices[day_ahead_prices['datetime'] < '2024-09-28']
+missing_prices = day_ahead_prices[day_ahead_prices['Day-ahead Price [EUR/MWh]'].isna()]
+missing_datetime_list = missing_prices['datetime'].tolist()
+day_ahead_prices['Day-ahead Price [EUR/MWh]'] = day_ahead_prices['Day-ahead Price [EUR/MWh]'].interpolate(method='linear')
 day_ahead_prices = day_ahead_prices.drop(columns=['MTU (CET/CEST)'])
 day_ahead_prices['date'] = day_ahead_prices['datetime'].dt.strftime('%d-%m-%Y')
 day_ahead_prices['hour'] = day_ahead_prices['datetime'].dt.hour
@@ -38,7 +41,7 @@ day_ahead_prices = day_ahead_prices[['datetime', 'date', 'hour', 'price']]
 duplicated_datetimes = day_ahead_prices[day_ahead_prices.duplicated(subset='datetime', keep=False)]
 duplicated_datetime_list = duplicated_datetimes['datetime'].unique().tolist()
 
-# take mean of the price for switch from winter time to summer time
+# take mean of the price for switch from summer time to winter time
 day_ahead_prices = day_ahead_prices.groupby('datetime', as_index=False).agg({
     'price': 'mean',
     'date': 'first',
@@ -75,7 +78,7 @@ load['date'] = load['datetime'].dt.strftime('%d-%m-%Y')
 
 # drop rows with datetime before January 1, 2016 and after September 28, 2024
 load = load[load['datetime'] >= '2016-01-01']
-load = load[load['datetime'] < '2024-09-28']
+load = load[load['datetime'] < '2024-09-01']
 
 # rename columns and rearrange dataframe
 load = load.rename(columns={'Day-ahead Total Load Forecast [MW] - BZN|NL': 'load_forecast',
@@ -91,23 +94,24 @@ load['block'] = (load['hour'] != load['hour'].shift()).cumsum()
 hourly_load_data = load.groupby('block').agg({
     'date': 'first',
     'hour': 'first',
-    'load_forecast': 'sum',
-    'actual_load': 'sum'
+    'load_forecast': 'mean',
+    'actual_load': 'mean'
 }).reset_index(drop=True)
 hourly_load_data['date'] = pd.to_datetime(hourly_load_data['date'], format='%d-%m-%Y')
 
+# add datetime column
+hourly_load_data['datetime'] = hourly_load_data['date'] + pd.to_timedelta(hourly_load_data['hour'], unit='h')
+hourly_load_data['datetime'] = pd.to_datetime(hourly_load_data["datetime"])
+
 # ensure proper transition from winter time to summer time
-hourly_load_data['load_forecast'] = hourly_load_data['load_forecast'].replace(0, pd.NA)
-hourly_load_data['actual_load'] = hourly_load_data['actual_load'].replace(0, pd.NA)
 hourly_load_data['load_forecast'] = pd.to_numeric(hourly_load_data['load_forecast'], errors='coerce')
 hourly_load_data['actual_load'] = pd.to_numeric(hourly_load_data['actual_load'], errors='coerce')
+hourly_load_data.loc[hourly_load_data['datetime'].isin(missing_datetime_list), 'load_forecast'] = pd.NA
+hourly_load_data.loc[hourly_load_data['datetime'].isin(missing_datetime_list), 'actual_load'] = pd.NA
 hourly_load_data['load_forecast'] = hourly_load_data['load_forecast'].interpolate(method='linear')
 hourly_load_data['actual_load'] = hourly_load_data['actual_load'].interpolate(method='linear')
 
-# add datetime column
-hourly_load_data['datetime'] = hourly_load_data['date'] + pd.to_timedelta(hourly_load_data['hour'], unit='h')
-
-# Ensure proper transition from winter time to summer time
+# ensure proper transition from winter time to summer time
 for dt in duplicated_datetime_list:
     hourly_load_data.loc[hourly_load_data['datetime'] == dt, 'load_forecast'] /= 2
     hourly_load_data.loc[hourly_load_data['datetime'] == dt, 'actual_load'] /= 2
@@ -198,35 +202,6 @@ API2_coal = merged_full
 output_path = os.path.join(processed_data_folder, 'API2_coal.csv')
 API2_coal.to_csv(output_path, index=False)
 
-### create dataframe for Brent Oil ###
-# read the brent oil data and the exchange data
-file_path = os.path.join(raw_data_folder, "Brent Oil (USD:bbL) 2016-2024.xlsx")
-brent_oil = pd.read_excel(file_path)
-brent_oil['Date'] = pd.to_datetime(brent_oil['Date'])
-file_path = os.path.join(raw_data_folder, "USD-EUR exchange rates.csv")
-exchange = pd.read_csv(file_path)
-exchange = exchange[['Date', "Price"]]
-exchange['Date'] = pd.to_datetime(exchange['Date'])
-
-# convert prices to EUR/t
-merged_df = pd.merge(brent_oil, exchange, on='Date', suffixes=('_USD', '_EUR'))
-merged_df['Price'] = merged_df['Price_USD'] * merged_df['Price_EUR']
-merged_df.drop(columns=['Price_USD', 'Price_EUR'], inplace=True)
-
-# add missing dates and convert to 24 hour
-full_date_range = pd.date_range(start=merged_df['Date'].min(), end=merged_df['Date'].max(), freq='D')
-full_dates = pd.DataFrame(full_date_range, columns=['Date'])
-merged_full = pd.merge(full_dates, merged_df, on='Date', how='left')
-merged_full['Price'] = merged_full['Price'].ffill()
-merged_full = merged_full.loc[merged_full.index.repeat(24)].reset_index(drop=True)
-merged_full['Hour'] = list(range(24)) * len(full_dates)
-merged_full['Datetime'] = merged_full['Date'] + pd.to_timedelta(merged_full['Hour'], unit='h')
-merged_full.drop(columns=['Date', 'Hour'], inplace=True)
-brent_oil = merged_full
-
-# save brent oil dataframe
-output_path = os.path.join(processed_data_folder, 'brent_oil.csv')
-brent_oil.to_csv(output_path, index=False)
 
 ### create dataframe for wind and solar production ###
 wind_and_solar_folder = 'Data/raw data/Wind and solar generation'
@@ -264,62 +239,247 @@ wind_and_solar = wind_and_solar[wind_and_solar['datetime'] < '2024-09-28']
 
 # sum up to total generation
 wind_and_solar["total_generation"] = wind_and_solar["solar"] + wind_and_solar["wind_onshore"] + wind_and_solar["wind_offshore"]
-wind_and_solar = wind_and_solar.drop(columns=['solar', 'wind_onshore', 'wind_offshore'])
+wind_and_solar["total_wind"] = wind_and_solar["wind_onshore"] + wind_and_solar["wind_offshore"]
+wind_and_solar = wind_and_solar.drop(columns=['wind_onshore', 'wind_offshore'])
 
 # create hourly dataframe
 wind_and_solar['block'] = (wind_and_solar['hour'] != wind_and_solar['hour'].shift()).cumsum()
 hourly_generation_data = wind_and_solar.groupby('block').agg({
     'date': 'first',
     'hour': 'first',
-    'total_generation': 'sum',
+    'total_generation': 'mean',
+    'solar': 'mean',
+    'total_wind': 'mean',
 }).reset_index(drop=True)
 hourly_generation_data['date'] = pd.to_datetime(hourly_generation_data['date'], format='%d-%m-%Y')
 
-# Ensure proper transition from winter time to summer time
-hourly_generation_data['total_generation'] = hourly_generation_data['total_generation'].replace(0, pd.NA)
-hourly_generation_data['total_generation'] = pd.to_numeric(hourly_generation_data['total_generation'], errors='coerce')
-hourly_generation_data['total_generation'] = hourly_generation_data['total_generation'].interpolate(method='linear')
-
 # add datetime column
 hourly_generation_data['datetime'] = hourly_generation_data['date'] + pd.to_timedelta(hourly_generation_data['hour'], unit='h')
+hourly_generation_data['datetime'] = pd.to_datetime(hourly_generation_data['datetime'])
+
+# ensure proper transition from winter time to summer time
+hourly_generation_data['total_generation'] = pd.to_numeric(hourly_generation_data['total_generation'], errors='coerce')
+hourly_generation_data.loc[hourly_generation_data['datetime'].isin(missing_datetime_list), 'total_generation'] = pd.NA
+hourly_generation_data['total_generation'] = hourly_generation_data['total_generation'].interpolate(method='linear')
+hourly_generation_data['solar'] = pd.to_numeric(hourly_generation_data['solar'], errors='coerce')
+hourly_generation_data.loc[hourly_generation_data['datetime'].isin(missing_datetime_list), 'solar'] = pd.NA
+hourly_generation_data['solar'] = hourly_generation_data['solar'].interpolate(method='linear')
+hourly_generation_data['total_wind'] = pd.to_numeric(hourly_generation_data['total_wind'], errors='coerce')
+hourly_generation_data.loc[hourly_generation_data['datetime'].isin(missing_datetime_list), 'total_wind'] = pd.NA
+hourly_generation_data['total_wind'] = hourly_generation_data['total_wind'].interpolate(method='linear')
 
 # ensure proper transition from summer time to winter time
 for dt in duplicated_datetime_list:
     hourly_generation_data.loc[hourly_generation_data['datetime'] == dt, 'total_generation'] /= 2
+    hourly_generation_data.loc[hourly_generation_data['datetime'] == dt, 'solar'] /= 2
+    hourly_generation_data.loc[hourly_generation_data['datetime'] == dt, 'total_wind'] /= 2
+
+### create dataframe for actual wind and solar generation
+actual_generation_folder = 'Data/raw data/Actual generation'
+# create wind and solar dataframe with day ahead forecasts for solar, wind offshore and wind onshore
+dataframes = []
+for filename in sorted(os.listdir(actual_generation_folder)):
+    if filename.startswith('Actual') and filename.endswith('.csv'):
+        file_path = os.path.join(actual_generation_folder, filename)
+        df = pd.read_csv(file_path)
+        dataframes.append(df)
+actual_generation = pd.concat(dataframes, ignore_index=True)
+columns_to_keep = [
+    'MTU',
+    'Solar  - Actual Aggregated [MW]',
+    'Wind Offshore  - Actual Aggregated [MW]',
+    'Wind Onshore  - Actual Aggregated [MW]'
+]
+actual_generation = actual_generation[columns_to_keep]
+actual_generation.columns = ['datetime', 'actual_solar', 'actual_wind_offshore', 'actual_wind_onshore']
+
+# create datetime, date and hour
+actual_generation['datetime'] = actual_generation['datetime'].str.split(' - ').str[0]
+actual_generation['datetime'] = pd.to_datetime(actual_generation['datetime'], format='%d.%m.%Y %H:%M')
+actual_generation['date'] = actual_generation['datetime'].dt.strftime('%d-%m-%Y')
+actual_generation['hour'] = actual_generation['datetime'].dt.hour
+
+# set columns to numeric type
+actual_generation['actual_wind_onshore'] = pd.to_numeric(actual_generation['actual_wind_onshore'], errors='coerce')
+actual_generation['actual_solar'] = pd.to_numeric(actual_generation['actual_solar'], errors='coerce')
+actual_generation['actual_wind_offshore'] = pd.to_numeric(actual_generation['actual_wind_offshore'], errors='coerce')
+
+# filter to data before 28 september 2024
+actual_generation = actual_generation[actual_generation['datetime'] < '2024-09-28']
+
+# sum up to total generation
+actual_generation["actual_total_generation"] = actual_generation["actual_solar"] + actual_generation["actual_wind_onshore"] + actual_generation["actual_wind_offshore"]
+actual_generation["actual_total_wind"] = actual_generation["actual_wind_onshore"] + actual_generation["actual_wind_offshore"]
+actual_generation = actual_generation.drop(columns=['actual_wind_onshore', 'actual_wind_offshore'])
+
+# create hourly dataframe
+actual_generation['block'] = (actual_generation['hour'] != actual_generation['hour'].shift()).cumsum()
+hourly_actual_generation_data = actual_generation.groupby('block').agg({
+    'date': 'first',
+    'hour': 'first',
+    'actual_total_generation': 'mean',
+    'actual_solar': 'mean',
+    'actual_total_wind': 'mean',
+}).reset_index(drop=True)
+hourly_actual_generation_data['date'] = pd.to_datetime(hourly_actual_generation_data['date'], format='%d-%m-%Y')
+
+# add datetime column
+hourly_actual_generation_data['datetime'] = hourly_actual_generation_data['date'] + pd.to_timedelta(hourly_actual_generation_data['hour'], unit='h')
+hourly_actual_generation_data['datetime'] = pd.to_datetime(hourly_actual_generation_data['datetime'])
+
+# ensure proper transition from winter time to summer time
+hourly_actual_generation_data['actual_total_generation'] = pd.to_numeric(hourly_actual_generation_data['actual_total_generation'], errors='coerce')
+hourly_actual_generation_data.loc[hourly_actual_generation_data['datetime'].isin(missing_datetime_list), 'actual_total_generation'] = pd.NA
+hourly_actual_generation_data['actual_total_generation'] = hourly_actual_generation_data['actual_total_generation'].interpolate(method='linear')
+hourly_actual_generation_data['actual_solar'] = pd.to_numeric(hourly_actual_generation_data['actual_solar'], errors='coerce')
+hourly_actual_generation_data.loc[hourly_actual_generation_data['datetime'].isin(missing_datetime_list), 'actual_solar'] = pd.NA
+hourly_actual_generation_data['actual_solar'] = hourly_actual_generation_data['actual_solar'].interpolate(method='linear')
+hourly_actual_generation_data['actual_total_wind'] = pd.to_numeric(hourly_actual_generation_data['actual_total_wind'], errors='coerce')
+hourly_actual_generation_data.loc[hourly_actual_generation_data['datetime'].isin(missing_datetime_list), 'actual_total_wind'] = pd.NA
+hourly_actual_generation_data['actual_total_wind'] = hourly_actual_generation_data['actual_total_wind'].interpolate(method='linear')
+
+# ensure proper transition from summer time to winter time
+for dt in duplicated_datetime_list:
+    hourly_actual_generation_data.loc[hourly_actual_generation_data['datetime'] == dt, 'actual_total_generation'] /= 2
+    hourly_actual_generation_data.loc[hourly_actual_generation_data['datetime'] == dt, 'actual_solar'] /= 2
+    hourly_actual_generation_data.loc[hourly_actual_generation_data['datetime'] == dt, 'actual_total_wind'] /= 2
+
+# merge generation dataframes
+cols_hourly_generation = ['datetime', 'total_generation', 'solar', 'total_wind']
+cols_hourly_actual_generation = ['datetime', 'actual_total_generation', 'actual_solar', 'actual_total_wind']
+generation = pd.merge(hourly_generation_data[cols_hourly_generation], hourly_actual_generation_data[cols_hourly_actual_generation], on='datetime', how='outer')
 
 # save total generation dataframe
 output_path = os.path.join(processed_data_folder, 'generation.csv')
-hourly_generation_data.to_csv(output_path, index=False)
+generation.to_csv(output_path, index=False)
+
+
+### create solar generation dataframe NED data ###
+wind_and_solar_folder = 'Data/raw data/Wind and solar generation'
+# create wind and solar dataframe with day ahead forecasts for solar, wind offshore and wind onshore
+dataframes = []
+for filename in sorted(os.listdir(wind_and_solar_folder)):
+    if filename.startswith('zon') and filename.endswith('.csv'):
+        file_path = os.path.join(wind_and_solar_folder, filename)
+        df = pd.read_csv(file_path)
+        dataframes.append(df)
+solar = pd.concat(dataframes, ignore_index=True)
+columns_to_keep = ['validfrom (UTC)', 'volume (kWh)']
+solar = solar[columns_to_keep]
+# rename columns
+solar.columns = ['datetime', 'solar_ned']
+
+# convert to MWh
+solar['solar_ned'] = solar['solar_ned'] / 1000
+
+# create datetime, date and hour
+solar['datetime'] = pd.to_datetime(solar['datetime'])
+solar['date'] = solar['datetime'].dt.strftime('%d-%m-%Y')
+solar['hour'] = solar['datetime'].dt.hour
+solar = solar.iloc[1:].reset_index(drop=True) # delete the first column
+
+# save solar dataframe
+output_path = os.path.join(processed_data_folder, 'solar_NED.csv')
+solar.to_csv(output_path, index=False)
+
+
+### create wind generation dataframe NED data ###
+wind_and_solar_folder = 'Data/raw data/Wind and solar generation'
+# create wind and solar dataframe with day ahead forecasts for solar, wind offshore and wind onshore
+dataframes = []
+for filename in sorted(os.listdir(wind_and_solar_folder)):
+    if filename.startswith('wind') and filename.endswith('.csv'):
+        file_path = os.path.join(wind_and_solar_folder, filename)
+        df = pd.read_csv(file_path)
+        dataframes.append(df)
+wind_onshore = pd.concat(dataframes, ignore_index=True)
+columns_to_keep = ['validfrom (UTC)', 'volume (kWh)']
+wind_onshore = wind_onshore[columns_to_keep]
+# rename columns
+wind_onshore.columns = ['datetime', 'wind_onshore_ned']
+
+# convert to MWh
+wind_onshore['wind_onshore_ned'] = wind_onshore['wind_onshore_ned'] / 1000
+
+# create datetime, date and hour
+wind_onshore['datetime'] = pd.to_datetime(wind_onshore['datetime'])
+wind_onshore = wind_onshore.iloc[1:].reset_index(drop=True) # delete the first column
+
+
+# create wind offshore dataframe
+dataframes = []
+for filename in sorted(os.listdir(wind_and_solar_folder)):
+    if filename.startswith('zeewind') and filename.endswith('.csv'):
+        file_path = os.path.join(wind_and_solar_folder, filename)
+        df = pd.read_csv(file_path)
+        dataframes.append(df)
+wind_offshore = pd.concat(dataframes, ignore_index=True)
+columns_to_keep = ['validfrom (UTC)', 'volume (kWh)']
+wind_offshore = wind_offshore[columns_to_keep]
+# rename columns
+wind_offshore.columns = ['datetime', 'wind_offshore_ned']
+
+# convert to MWh
+wind_offshore['wind_offshore_ned'] = wind_offshore['wind_offshore_ned'] / 1000
+
+# create datetime, date and hour
+wind_offshore['datetime'] = pd.to_datetime(wind_offshore['datetime'])
+wind_offshore = wind_offshore.iloc[1:].reset_index(drop=True) # delete the first column
+
+wind = pd.merge(wind_onshore, wind_offshore, on='datetime', how='outer')
+wind['total_wind_ned'] = wind['wind_onshore_ned'] + wind['wind_offshore_ned']
+
+# save wind dataframe
+output_path = os.path.join(processed_data_folder, 'wind_NED.csv')
+wind.to_csv(output_path, index=False)
+
 
 ### create dataframe with all data ###
 # change datetime name
 API2_coal.rename(columns={'Datetime': 'datetime'}, inplace=True)
 ttf_gas.rename(columns={'Datetime': 'datetime'}, inplace=True)
-brent_oil.rename(columns={'Datetime': 'datetime'}, inplace=True)
 EUA.rename(columns={'Datetime': 'datetime'}, inplace=True)
 
 # choose relevant columns
 day_ahead_prices = day_ahead_prices[['datetime', 'price']]
-hourly_load_data = hourly_load_data[['datetime', 'load_forecast']]
-hourly_generation_data = hourly_generation_data[['datetime', 'total_generation']]
+hourly_load_data = hourly_load_data[['datetime', 'load_forecast', 'actual_load']]
+generation = generation[['datetime', 'total_generation','solar', 'total_wind', 'actual_total_generation', 'actual_solar', 'actual_total_wind']]
 API2_coal = API2_coal[['datetime', 'Price']].rename(columns={'Price': 'API2_coal_price'})
 ttf_gas = ttf_gas[['datetime', 'Price']].rename(columns={'Price': 'ttf_gas_price'})
-brent_oil = brent_oil[['datetime', 'Price']].rename(columns={'Price': 'brent_oil_price'})
 EUA = EUA[['datetime', 'Price']].rename(columns={'Price': 'EUA_price'})
+solar = solar[['datetime', 'solar_ned']]
+wind = wind[['datetime', 'total_wind_ned']]
 
 # merge dfs
 merged_df = day_ahead_prices.merge(hourly_load_data, on='datetime', how='outer')
-merged_df = merged_df.merge(hourly_generation_data, on='datetime', how='outer')
+merged_df = merged_df.merge(generation, on='datetime', how='outer')
 merged_df = merged_df.merge(API2_coal, on='datetime', how='outer')
 merged_df = merged_df.merge(ttf_gas, on='datetime', how='outer')
-merged_df = merged_df.merge(brent_oil, on='datetime', how='outer')
 merged_df = merged_df.merge(EUA, on='datetime', how='outer')
+merged_df = merged_df.merge(solar, on='datetime', how='outer')
+merged_df = merged_df.merge(wind, on='datetime', how='outer')
 
 # filter on the correct data
-merged_df = merged_df[(merged_df['datetime'] >= '2016-01-01') & (merged_df['datetime'] <= '2024-08-31')]
+merged_df = merged_df[(merged_df['datetime'] >= '2016-01-01') & (merged_df['datetime'] < '2024-09-01')]
 
 # save merged dataframe
 output_path = os.path.join(processed_data_folder, 'data.csv')
 merged_df.to_csv(output_path, index=False)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
