@@ -1,3 +1,8 @@
+"""
+Preprocessing of the data, obtains a data frame with the data ready to be used by the methods
+"""
+
+
 import os
 import pandas as pd
 import numpy as np
