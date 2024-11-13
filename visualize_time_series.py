@@ -1,25 +1,16 @@
+"""
+Creates plots of the preprocessed data
+"""
+
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
 
 # import the data
 processed_data_folder = 'Data/processed data'
-prices_df = pd.read_csv(os.path.join(processed_data_folder, "prices.csv"))
-generation_df = pd.read_csv(os.path.join(processed_data_folder, "generation.csv"))
-load_df = pd.read_csv(os.path.join(processed_data_folder, "load.csv"))
-api2_coal = pd.read_csv(os.path.join(processed_data_folder, "API2_coal.csv"))
-brent_oil = pd.read_csv(os.path.join(processed_data_folder, "brent_oil.csv"))
-EUA = pd.read_csv(os.path.join(processed_data_folder, "EUA.csv"))
-ttf_gas = pd.read_csv(os.path.join(processed_data_folder, "ttf_gas.csv"))
-
-# set datetime columns to datetime type
-prices_df['datetime'] = pd.to_datetime(prices_df['datetime'], errors='coerce')
-generation_df['datetime'] = pd.to_datetime(generation_df['datetime'], errors='coerce')
-load_df['datetime'] = pd.to_datetime(load_df['datetime'], errors='coerce')
-api2_coal['Datetime'] = pd.to_datetime(api2_coal['Datetime'], errors='coerce')
-brent_oil['Datetime'] = pd.to_datetime(brent_oil['Datetime'], errors='coerce')
-EUA['Datetime'] = pd.to_datetime(EUA['Datetime'], errors='coerce')
-ttf_gas['Datetime'] = pd.to_datetime(ttf_gas['Datetime'], errors='coerce')
+data = pd.read_csv(os.path.join(processed_data_folder, "data.csv"))
+# set datetime column to datetime type
+data['datetime'] = pd.to_datetime(data['datetime'], errors='coerce')
 
 # set colors
 color_1 = '#A0522D'
@@ -27,37 +18,27 @@ color_2 = '#4682B4'
 color_3 = '#8B0000'
 color_4 = '#6A5ACD'
 
-# create figure with prices for API2 coal, TTF gas, Brent oil en EUA
-fig, axs = plt.subplots(4, 1, figsize=(10, 16), sharex=True)
+### create figure with prices for API2 coal, TTF gas and EUA ###
+fig, axs = plt.subplots(3, 1, figsize=(10, 16), sharex=True)
 
 # plot the API2 coal data
-axs[0].plot(api2_coal['Datetime'], api2_coal['Price'], label='API2 Coal', color=color_1)
+axs[0].plot(data['datetime'], data['API2_coal_price'], label='API2 Coal', color=color_1)
 axs[0].set_title('API2 coal price over time')
 axs[0].set_ylabel('Price [EUR/t]', labelpad=20)
 axs[0].grid(True)
-axs[0].legend()
-
-# plot the Brent oil data
-axs[1].plot(brent_oil['Datetime'], brent_oil['Price'], label='Brent Oil', color=color_2)
-axs[1].set_title('Brent oil price over time')
-axs[1].set_ylabel('Price [EUR/bbL]', labelpad=20)
-axs[1].grid(True)
-axs[1].legend()
 
 # plot the TTF gas data
-axs[2].plot(ttf_gas['Datetime'], ttf_gas['Price'], label='TTF Gas', color=color_3)
-axs[2].set_title('TTF gas price over time')
-axs[2].set_ylabel('Price [EUR/MWh]', labelpad=20)
-axs[2].grid(True)
-axs[2].legend()
+axs[1].plot(data['datetime'], data['ttf_gas_price'], label='TTF Gas', color=color_2)
+axs[1].set_title('TTF gas price over time')
+axs[1].set_ylabel('Price [EUR/MWh]', labelpad=20)
+axs[1].grid(True)
 
 # plot the EUA data
-axs[3].plot(EUA['Datetime'], EUA['Price'], label='EUA', color=color_4)
-axs[3].set_title('EUA price over time')
-axs[3].set_xlabel('Date')
-axs[3].set_ylabel('Price [EUR/tCO2]', labelpad=20)
-axs[3].grid(True)
-axs[3].legend()
+axs[2].plot(data['datetime'], data['EUA_price'], label='EUA', color=color_3)
+axs[2].set_title('EUA price over time')
+axs[2].set_xlabel('Date')
+axs[2].set_ylabel('Price [EUR/tCO2]', labelpad=20)
+axs[2].grid(True)
 
 # ensure the x-axis labels do not overlap and everything fits well
 plt.xticks(rotation=45)
@@ -69,49 +50,59 @@ plt.subplots_adjust(top=0.95, bottom=0.1)
 plt.show()
 
 # create a new column 'date' to obtain the date without time component
-prices_df['date'] = prices_df['datetime'].dt.date
-generation_df['date'] = generation_df['datetime'].dt.date
-load_df['date'] = load_df['datetime'].dt.date
+data['date'] = data['datetime'].dt.date
 
 # create df's with daily data
-daily_prices_df = prices_df.groupby('date').agg({'price': 'sum'}).reset_index()
-daily_generation_df = generation_df.groupby('date').agg({'total_generation': 'sum'}).reset_index()
-daily_load_df = load_df.groupby('date').agg({'load_forecast': 'sum'}).reset_index()
+daily_data_df = data.groupby('date').agg({'price': 'mean',
+                                            'total_generation': 'sum',
+                                            'actual_total_generation': 'sum',
+                                            'actual_total_wind': 'sum',
+                                            'total_wind': 'sum',
+                                            'actual_solar': 'sum',
+                                            'solar': 'sum',
+                                            'load_forecast': 'sum',
+                                            'solar_ned': 'sum',
+                                            'total_wind_ned': 'sum',
+                                            'actual_load': 'sum'}).reset_index()
 
-# rename the columns
-daily_prices_df.rename(columns={'price': 'daily_price'}, inplace=True)
-daily_generation_df.rename(columns={'total_generation': 'daily_generation'}, inplace=True)
-daily_load_df.rename(columns={'load_forecast': 'daily_load_forecast'}, inplace=True)
+# convert to GWh
+daily_data_df['solar'] = daily_data_df['solar'] / 1000
+daily_data_df['solar_ned'] = daily_data_df['solar_ned'] / 1000
+daily_data_df['total_wind'] = daily_data_df['total_wind'] / 1000
+daily_data_df['load_forecast'] = daily_data_df['load_forecast'] / 1000
+daily_data_df['actual_load'] = daily_data_df['actual_load'] / 1000
+daily_data_df['total_wind_ned'] = daily_data_df['total_wind_ned'] / 1000
 
-# converting from MWh to GWh
-daily_prices_df['daily_price_gwh'] = daily_prices_df['daily_price'] / 1000
-daily_generation_df['daily_generation_gwh'] = daily_generation_df['daily_generation'] / 1000
-daily_load_df['daily_load_forecast_gwh'] = daily_load_df['daily_load_forecast'] / 1000
 
-# create the figure with the day-ahead electricity prices, generation forecast and load forecast
-fig, axs = plt.subplots(3, 1, figsize=(10, 12), sharex=True)
+#### create the figure with the day-ahead electricity prices, generation forecast and load forecast ###
+fig, axs = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
 
-# plot de dagelijkse prijzen
-axs[0].plot(daily_prices_df['date'], daily_prices_df['daily_price_gwh'], label='Total Price', color=color_1)
-axs[0].set_title('Day-ahead electricity prices EPEX-NL over time')
-axs[0].set_ylabel('Day-ahead electricity price [EUR/GWh]', fontsize=8, labelpad=20)
+# plot daily prices
+axs[0].plot(daily_data_df['date'], daily_data_df['price'], label='Price', color=color_1)
+axs[0].set_title('Daily average day-ahead electricity prices EPEX-NL over time')
+axs[0].set_ylabel('Daily average day-ahead electricity price [EUR/MWh]', fontsize=6, labelpad=20)
 axs[0].grid(True)
-axs[0].legend()
 
-# plot de dagelijkse generatie
-axs[1].plot(daily_generation_df['date'], daily_generation_df['daily_generation_gwh'], label='Total Generation', color=color_2)
-axs[1].set_title('Day-ahead wind and solar generation forecast over time')
-axs[1].set_ylabel('Day-ahead wind and solar generation forecast [GW]', fontsize=8, labelpad=20)
+# plot daily wind generation
+axs[1].plot(daily_data_df['date'], daily_data_df['total_wind'], label='Generation Forecast Wind', color=color_2)
+#axs[1].plot(daily_data_df['date'], daily_data_df['total_wind_ned'], label='Generation Forecast Wind', color=color_3)
+axs[1].set_title('Daily wind generation forecast over time')
+axs[1].set_ylabel('Daily wind generation forecast [GWh]', fontsize=6, labelpad=20)
 axs[1].grid(True)
-axs[1].legend()
 
-# plot de dagelijkse load forecast
-axs[2].plot(daily_load_df['date'], daily_load_df['daily_load_forecast_gwh'], label='Total Load Forecast', color=color_3)
-axs[2].set_title('Day-ahead load forecast over time')
-axs[2].set_xlabel('Date')
-axs[2].set_ylabel('Day-ahead load forecast [GW]', fontsize=8, labelpad=20)
+# plot daily solar generation
+axs[2].plot(daily_data_df['date'], daily_data_df['solar'], label='Generation Forecast Solar', color=color_3)
+#axs[2].plot(daily_data_df['date'], daily_data_df['solar_ned'], label='Generation  Solar', color=color_4)
+axs[2].set_title('Daily solar generation forecast over time')
+axs[2].set_ylabel('Daily solar generation forecast [GWh]', fontsize=6, labelpad=20)
 axs[2].grid(True)
-axs[2].legend()
+
+# plot daily load forecast
+axs[3].plot(daily_data_df['date'], daily_data_df['load_forecast'], label='Load Forecast', color=color_4)
+axs[3].set_title('Daily load forecast over time')
+axs[3].set_xlabel('Date')
+axs[3].set_ylabel('Daily load forecast [GWh]', fontsize=8, labelpad=20)
+axs[3].grid(True)
 
 # ensure the x-axis labels do not overlap and everything fits well
 plt.xticks(rotation=45)
@@ -120,4 +111,93 @@ fig.tight_layout(pad=2.0)
 plt.subplots_adjust(top=0.95, bottom=0.1)
 
 # show the graph
+plt.show()
+
+daily_data_df['date'] = pd.to_datetime(daily_data_df['date'])
+
+# set date boundaries for the two periods
+start_date_1 = pd.to_datetime('2016-01-01')
+end_date_1 = pd.to_datetime('2020-12-31')
+start_date_2 = pd.to_datetime('2020-01-01')
+end_date_2 = pd.to_datetime('2024-08-31')
+
+# filter for first time period (01-01-2016 t/m 31-12-2020)
+daily_data_df_period_1 = daily_data_df[(daily_data_df['date'] >= start_date_1) & (daily_data_df['date'] <= end_date_1)]
+# filter for second time period (01-01-2020 t/m 31-08-2024)
+daily_data_df_period_2 = daily_data_df[(daily_data_df['date'] >= start_date_2) & (daily_data_df['date'] <= end_date_2)]
+
+
+### create plot for the first time period ###
+fig, axs = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
+
+# plot daily prices for the first time peeriod
+max_price = daily_data_df_period_1['price'].max()
+y_margin = max_price * 0.35
+axs[0].plot(daily_data_df_period_1['date'], daily_data_df_period_1['price'], label='Price', color=color_1)
+axs[0].set_title('Daily Average Day-Ahead Electricity Prices EPEX-NL Over Time')
+axs[0].set_ylim(0, max_price + y_margin)
+axs[0].set_ylabel('Daily average day-ahead electricity price [EUR/MWh]', fontsize=6, labelpad=20)
+axs[0].grid(True)
+
+# plot daily wind generation of the first time period
+axs[1].plot(daily_data_df_period_1['date'], daily_data_df_period_1['total_wind'], label='Total wind', color=color_2)
+axs[1].set_title('Daily wind generation forecast over time')
+axs[1].set_ylabel('Daily wind generation forecast [GWh]', fontsize=6, labelpad=20)
+axs[1].grid(True)
+
+# plot daily solar generation of the first time period
+axs[2].plot(daily_data_df_period_1['date'], daily_data_df_period_1['solar'], label='Total solar', color=color_3)
+axs[2].set_title('Daily solar generation forecast over time')
+axs[2].set_ylabel('Daily solar generation forecast [GWh]', fontsize=6, labelpad=20)
+axs[2].grid(True)
+
+# plot daily load forecast of the first time period
+axs[3].plot(daily_data_df_period_1['date'], daily_data_df_period_1['load_forecast'], label='Total Load Forecast', color=color_4)
+axs[3].set_title('Daily load forecast over time')
+axs[3].set_xlabel('Date')
+axs[3].set_ylabel('Daily load forecast [GWh]', fontsize=8, labelpad=20)
+axs[3].grid(True)
+
+# ensure the x-axis labels do not overlap
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.subplots_adjust(top=0.95, bottom=0.1)
+plt.show()
+
+
+### create plot for the second time period ###
+fig, axs = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
+
+# plot the daily price of the second period
+max_price = daily_data_df_period_2['price'].max()
+y_margin = max_price * 0.35
+axs[0].plot(daily_data_df_period_2['date'], daily_data_df_period_2['price'], label='Price', color=color_1)
+axs[0].set_title('Daily Average Day-Ahead Electricity Prices EPEX-NL Over Time')
+axs[0].set_ylim(0, max_price + y_margin)
+axs[0].set_ylabel('Daily average day-ahead electricity price [EUR/MWh]', fontsize=6, labelpad=20)
+axs[0].grid(True)
+
+# plot daily wind generation of the second time period
+axs[1].plot(daily_data_df_period_2['date'], daily_data_df_period_2['total_wind'], label='Total wind', color=color_2)
+axs[1].set_title('Daily wind generation forecast over time')
+axs[1].set_ylabel('Daily wind generation forecast [GWh]', fontsize=6, labelpad=20)
+axs[1].grid(True)
+
+# plot daily solar generation of the second time period
+axs[2].plot(daily_data_df_period_2['date'], daily_data_df_period_2['solar'], label='Total solar', color=color_3)
+axs[2].set_title('Daily solar generation forecast over time')
+axs[2].set_ylabel('Daily solar generation forecast [GWh]', fontsize=6, labelpad=20)
+axs[2].grid(True)
+
+# plot daily load forecasting of the second time period
+axs[3].plot(daily_data_df_period_2['date'], daily_data_df_period_2['load_forecast'], label='Total Load Forecast', color=color_4)
+axs[3].set_title('Daily load forecast over time')
+axs[3].set_xlabel('Date')
+axs[3].set_ylabel('Daily load forecast [GWh]', fontsize=8, labelpad=20)
+axs[3].grid(True)
+
+# ensure the x-axis labels do not overlap
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.subplots_adjust(top=0.95, bottom=0.1)
 plt.show()
