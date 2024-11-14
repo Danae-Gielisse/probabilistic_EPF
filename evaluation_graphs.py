@@ -17,7 +17,8 @@ color_4 = '#6A5ACD'
 # choose time span
 time_span = 1
 folder_point = f'Results/point_forecasting_time_span_{time_span}'
-folder_coverage = f'Results/Evaluation_metrics/emperical_coverage_ts{time_span}.csv'
+folder_coverage_90 = f'Results/Evaluation_metrics/emperical_coverage_ts{time_span}_nc0.9.csv'
+folder_coverage_50 = f'Results/Evaluation_metrics/emperical_coverage_ts{time_span}_nc0.5.csv'
 folder_CPRS = f'Results/Evaluation_metrics/CPRS_ts{time_span}.csv'
 
 ### create point forecasting graphs of mae and rmse ###
@@ -103,8 +104,9 @@ plt.show()
 
 
 ### create plot for emperical coverage ###
+# plot coverage for nnominal coverage equal to 0.9
 # get data for lambda and PICP_values
-coverage_df = pd.read_csv(folder_coverage, index_col=0)
+coverage_df = pd.read_csv(folder_coverage_90, index_col=0)
 coverage_BIC = coverage_df.loc['Empirical_coverage', 'BIC']
 # drop BIC column from dataframe
 coverage_df = coverage_df.drop(coverage_df.columns[-1], axis=1)
@@ -120,6 +122,29 @@ plt.title(f'Empirical coverage LQRA time span {time_span}')
 plt.xscale('log')
 plt.ylim(0.7, 0.92)
 plt.axhline(y=0.9, color='black', linestyle='--', label='Target PICP = 0.9')
+plt.axhline(y=coverage_BIC, color=color_1, linestyle='-', label='LQRA(BIC)')
+plt.xticks([1, 10, 100, 1000], ['10^0', '10^1', '10^2', '10^3'])
+plt.legend()
+plt.show()
+
+# plot coverage for nominal coverage equal to 0.5
+# get data for lambda and PICP_values
+coverage_df = pd.read_csv(folder_coverage_50, index_col=0)
+coverage_BIC = coverage_df.loc['Empirical_coverage', 'BIC']
+# drop BIC column from dataframe
+coverage_df = coverage_df.drop(coverage_df.columns[-1], axis=1)
+lambda_values = coverage_df.columns.astype(float)
+picp_values = coverage_df.loc['Empirical_coverage'].values
+
+# scatter plot for PICP vs lambda values
+plt.figure(figsize=(10, 6))
+plt.scatter(lambda_values, picp_values, color='b', edgecolors='b', facecolors='none', label='LQRA(\u03BB)')
+plt.xlabel('\u03BB')
+plt.ylabel('Empirical Coverage (PICP)')
+plt.title(f'Empirical coverage LQRA time span {time_span}')
+plt.xscale('log')
+plt.ylim(0.35, 0.52)
+plt.axhline(y=0.5, color='black', linestyle='--', label='Target PICP = 0.5')
 plt.axhline(y=coverage_BIC, color=color_1, linestyle='-', label='LQRA(BIC)')
 plt.xticks([1, 10, 100, 1000], ['10^0', '10^1', '10^2', '10^3'])
 plt.legend()
