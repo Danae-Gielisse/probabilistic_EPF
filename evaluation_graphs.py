@@ -20,7 +20,6 @@ folder_point = f'Results/point_forecasting_time_span_{time_span}'
 folder_coverage = f'Results/Evaluation_metrics/emperical_coverage_ts{time_span}.csv'
 folder_CPRS = f'Results/Evaluation_metrics/CPRS_ts{time_span}.csv'
 
-
 ### create point forecasting graphs of mae and rmse ###
 # list to store loaded DataFrames along with their filenames
 point_results = []
@@ -126,16 +125,20 @@ plt.show()
 ### create plot for CPRS ###
 # get data for lambda and APS values
 CRPS_df = pd.read_csv(folder_CPRS, index_col=0)
+CRPS_BIC = CRPS_df.loc['CRPS', 'BIC']
+# drop BIC column from dataframe
+CRPS_df = CRPS_df.drop(CRPS_df.columns[-1], axis=1)
 lambda_values = CRPS_df.columns.astype(float)
 APS = CRPS_df.loc['CRPS'].values
 
 # scatter plot for APS vs lambda values
 plt.figure(figsize=(10, 6))
-plt.scatter(lambda_values, APS, color='b', edgecolors='b', facecolors='none', label='Average Pinball Score (APS)')
-plt.xlabel('Lambda Value')
+plt.scatter(lambda_values, APS, color='b', edgecolors='b', facecolors='none', label='LQRA(\u03BB)')
+plt.xlabel('\u03BB')
 plt.ylabel('Average Pinball Score (APS)')
-plt.title('Scatter Plot of Lambda vs. Average Pinball Score (APS)')
+plt.title(f'Average pinball score LQRA time span {time_span}')
 plt.xscale('log')
 plt.xticks([1, 10, 100, 1000], ['10^0', '10^1', '10^2', '10^3'])
+plt.axhline(y=CRPS_BIC, color='r', linestyle='--', label='LQRA(BIC)')
 plt.legend()
 plt.show()
