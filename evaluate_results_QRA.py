@@ -13,13 +13,12 @@ PICP_path = f'Results/Evaluation_metrics/emperical_coverage_ts{time_span}.csv'
 
 # create list of all forecasts for all lambdas
 LAMBDA = np.concatenate(([0], np.logspace(-1, 3, 19)))
-"""
+
 forecast_list = []
 for i in range(0, len(LAMBDA)):
     probabilistic_forecast_folder = os.path.join(forecast_path, 'forecast_lambda_' + str(LAMBDA[i]) + '.csv')
     forecast = pd.read_csv(probabilistic_forecast_folder)
     forecast_list.append(forecast)
-
 
 def create_CRPS_matrix(forecast):
     number_of_days = int(round(len(forecast) / 24))
@@ -80,7 +79,6 @@ df_mean_CRPS['BIC'] = average_CRPS_BIC
 # save CPRS dataframe
 df_mean_CRPS.to_csv(cprs_path)
 
-"""
 
 ### methods for computing emperical coverage ###
 '''
@@ -158,10 +156,10 @@ percentage = 0.9
 significance_level = 0.05
 
 # perform kupiec test for LQRA(BIC) and LQRA(46)
-forecast_list = []
+forecast_list_2 = []
 forecast_BIC = pd.read_csv(os.path.join(forecast_path, 'forecast_BIC.csv'), index_col=[0, 1]).reset_index(drop=True)
-forecast_list.append(forecast_BIC)
-forecast_list.append(pd.read_csv(os.path.join(forecast_path, 'forecast_lambda_46.41588833612777.csv')))
+forecast_list_2.append(forecast_BIC)
+forecast_list_2.append(pd.read_csv(os.path.join(forecast_path, 'forecast_lambda_46.41588833612777.csv')))
 number_of_passes_dict = {}
 for i, forecast in enumerate(forecast_list):
     # perform the kupiec test for all 24 hours
@@ -188,7 +186,7 @@ for i in range(0, len(forecast_list)):
     df_empirical_coverage.loc['Empirical_coverage', LAMBDA[i]] = coverage
 # add coverage LQRA(BIC)
 coverage_BIC, _ = empirical_coverage(forecast_BIC, percentage)
-df_empirical_coverage.loc['Empirical_coverage' 'BIC'] = coverage_BIC
+df_empirical_coverage.loc['Empirical_coverage', 'BIC'] = coverage_BIC
 
 # save PICP dataframe
 df_empirical_coverage.to_csv(PICP_path)
