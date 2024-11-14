@@ -6,10 +6,13 @@ import os
 
 # choose time span
 time_span = 1
+# choose nominal coverage and significance level
+percentage = 0.5
+significance_level = 0.05
 
 forecast_path = f'Results/probabilistic_forecasts_time_span_{time_span}'
 cprs_path = f'Results/Evaluation_metrics/CPRS_ts{time_span}.csv'
-PICP_path = f'Results/Evaluation_metrics/emperical_coverage_ts{time_span}.csv'
+PICP_path = f'Results/Evaluation_metrics/emperical_coverage_ts{time_span}_nc{percentage}.csv'
 
 # create list of all forecasts for all lambdas
 LAMBDA = np.concatenate(([0], np.logspace(-1, 3, 19)))
@@ -19,7 +22,7 @@ for i in range(0, len(LAMBDA)):
     probabilistic_forecast_folder = os.path.join(forecast_path, 'forecast_lambda_' + str(LAMBDA[i]) + '.csv')
     forecast = pd.read_csv(probabilistic_forecast_folder)
     forecast_list.append(forecast)
-
+"""
 def create_CRPS_matrix(forecast):
     number_of_days = int(round(len(forecast) / 24))
     crps_df = pd.DataFrame(index=range(0, number_of_days), columns=range(0, 24))
@@ -78,7 +81,7 @@ df_mean_CRPS['BIC'] = average_CRPS_BIC
 
 # save CPRS dataframe
 df_mean_CRPS.to_csv(cprs_path)
-
+"""
 
 ### methods for computing emperical coverage ###
 '''
@@ -149,11 +152,6 @@ def kupiec_test(emperical_coverage_list, confidence_level):
     p_value = 1 - chi2.cdf(lr_uc, df=1)
 
     return p_value
-
-
-# choose nominal coverage and significance level
-percentage = 0.9
-significance_level = 0.05
 
 # perform kupiec test for LQRA(BIC) and LQRA(46)
 forecast_list_2 = []
