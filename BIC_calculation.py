@@ -11,14 +11,13 @@ TAU = np.arange(1, 100) / 100
 calib = 364
 time_span = 1 # Choose the time span
 
-if time_span == 1:
-    folder_BIC_df = 'Results/probabilistic_forecasts_time_span_1/BIC_df.csv'
-    folder_forecast_BIC = 'Results/probabilistic_forecasts_time_span_1/forecast_BIC.csv'
-    number_of_days = 735
-else:
-    output_folder = 'Results/probabilistic_forecasts_time_span_2/BIC_df.csv'
-    folder_forecast_BIC = 'Results/probabilistic_forecasts_time_span_2/forecast_BIC.csv'
-    number_of_days = 613
+# folders where the csv files are located
+folder_BIC_df = f'Results/probabilistic_forecasts_time_span_{time_span}/BIC_df.csv'
+folder_forecast_BIC = f'Results/probabilistic_forecasts_time_span_{time_span}/forecast_BIC.csv'
+
+# get number of days in test period
+days_mapping = {1: 735, 2: 613}
+number_of_days = days_mapping.get(time_span)
 
 def preload_forecasts(lambda_values, time_span):
     forecast_data = {}
