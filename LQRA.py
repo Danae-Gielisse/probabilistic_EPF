@@ -8,7 +8,6 @@ import pandas as pd
 from scipy.optimize import linprog
 import os
 from joblib import Parallel, delayed
-# from qpsolvers import solve_qp
 
 # parameters
 WIN = range(56, 729, 28)
