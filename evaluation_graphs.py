@@ -16,14 +16,10 @@ color_4 = '#6A5ACD'
 
 # choose time span
 time_span = 1
-if time_span == 1:
-    folder_point = 'Results/point_forecasting_time_span_1'
-    folder_coverage = 'Results/Evaluation_metrics/emperical_coverage_ts1.csv'
-    folder_CPRS = 'Results/Evaluation_metrics/CPRS_ts1.csv'
-else:
-    folder_point = 'Results/point_forecasting_time_span_2'
-    folder_coverage = 'Results/Evaluation_metrics/emperical_coverage_ts2.csv'
-    folder_CPRS = 'Results/Evaluation_metrics/CPRS_ts2.csv'
+folder_point = f'Results/point_forecasting_time_span_{time_span}'
+folder_coverage = f'Results/Evaluation_metrics/emperical_coverage_ts{time_span}.csv'
+folder_CPRS = f'Results/Evaluation_metrics/CPRS_ts{time_span}.csv'
+
 
 ### create point forecasting graphs of mae and rmse ###
 # list to store loaded DataFrames along with their filenames
