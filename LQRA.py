@@ -129,7 +129,7 @@ def compute_for_lambda(lambda_val, folder):
     beta_df.to_csv(beta_file, index=False)
 
 if __name__ == "__main__":
-    lambda_values = LAMBDA[[13]]
+    lambda_values = LAMBDA[[19]]
     for l in lambda_values:
         l_val = l
         compute_for_lambda(l_val, output_folder)

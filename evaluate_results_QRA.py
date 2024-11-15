@@ -7,7 +7,7 @@ import os
 # choose time span
 time_span = 1
 # choose nominal coverage and significance level
-percentage = 0.5
+percentage = 0.9
 significance_level = 0.05
 
 forecast_path = f'Results/probabilistic_forecasts_time_span_{time_span}'
@@ -159,7 +159,7 @@ forecast_BIC = pd.read_csv(os.path.join(forecast_path, 'forecast_BIC.csv'), inde
 forecast_list_2.append(forecast_BIC)
 forecast_list_2.append(pd.read_csv(os.path.join(forecast_path, 'forecast_lambda_46.41588833612777.csv')))
 number_of_passes_dict = {}
-for i, forecast in enumerate(forecast_list):
+for i, forecast in enumerate(forecast_list_2):
     # perform the kupiec test for all 24 hours
     kupiec_list = []
     for hour in range(0, 24):
