@@ -9,7 +9,7 @@ import pandas as pd
 LAMBDA = np.concatenate(([0], np.logspace(-1, 3, 19)))
 TAU = np.arange(1, 100) / 100
 calib = 364
-time_span = 2 # Choose the time span
+time_span = 1 # Choose the time span
 
 # folders where the csv files are located
 folder_BIC_df = f'Results/probabilistic_forecasts_time_span_{time_span}/BIC_df.csv'
