@@ -5,10 +5,10 @@ from scipy.stats import chi2
 import os
 
 # choose time span
-time_span = 1
+time_span = 2
 # choose nominal coverage and significance level
-percentage = 0.9
-significance_level = 0.05
+percentage = 0.5
+significance_level = 0.01
 
 forecast_path = f'Results/probabilistic_forecasts_time_span_{time_span}'
 cprs_path = f'Results/Evaluation_metrics/CPRS_ts{time_span}.csv'
@@ -152,6 +152,7 @@ def kupiec_test(emperical_coverage_list, confidence_level):
     p_value = 1 - chi2.cdf(lr_uc, df=1)
 
     return p_value
+
 
 # perform kupiec test for LQRA(BIC) and LQRA(46)
 forecast_list_2 = []

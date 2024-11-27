@@ -20,6 +20,69 @@ folder_point = f'Results/point_forecasting_time_span_{time_span}'
 folder_coverage_90 = f'Results/Evaluation_metrics/emperical_coverage_ts{time_span}_nc0.9.csv'
 folder_coverage_50 = f'Results/Evaluation_metrics/emperical_coverage_ts{time_span}_nc0.5.csv'
 folder_CPRS = f'Results/Evaluation_metrics/CPRS_ts{time_span}.csv'
+folder_BIC = f'Results/probabilistic_forecasts_time_span_{time_span}/forecast_BIC.csv'
+
+### create plot prediction intervals ###
+forecast_BIC = pd.read_csv(folder_BIC, index_col=0).reset_index(drop=True)
+forecast_BIC['Date'] = pd.to_datetime(forecast_BIC['Date'])
+
+# Extract unique dates from the dataset (ignoring the time)
+forecast_BIC['Day'] = forecast_BIC['Date'].dt.date  # Add a new column for just the day
+unique_days = forecast_BIC['Day'].unique()  # Get all unique days
+
+# Iterate through each unique day
+for day in unique_days:
+    # Filter data for the current day
+    daily_data = forecast_BIC[forecast_BIC['Day'] == day]
+
+    # Check if all prices are within the 50% prediction interval
+    if (daily_data['Price'] >= daily_data['Percentile_5']).all() and \
+            (daily_data['Price'] <= daily_data['Percentile_95']).all():
+        print(f"The first day where all prices are within the 90% prediction interval is: {day}")
+        break
+else:
+    print("No day found where all prices are within the 50% prediction interval.")
+
+# Filter data for the second day (24-48 hours)
+start_time = forecast_BIC['Date'].min() + pd.Timedelta(days=1)  # Start of the second day
+end_time = start_time + pd.Timedelta(hours=24)  # End of the second day
+forecast_BIC = forecast_BIC[(forecast_BIC['Date'] >= start_time) & (forecast_BIC['Date'] < end_time)]
+
+
+# Create a figure and axes
+fig, ax = plt.subplots(figsize=(12, 6))
+
+# Plot the actual prices
+ax.plot(forecast_BIC['Date'], forecast_BIC['Price'], label='Actual Price', color='black', linewidth=2)
+
+# 90% prediction interval (5-95)
+ax.fill_between(
+    forecast_BIC['Date'],
+    forecast_BIC['Percentile_5'],
+    forecast_BIC['Percentile_95'],
+    color='blue', alpha=0.2, label='90% Prediction Interval'
+)
+
+# 50% prediction interval (25-75)
+ax.fill_between(
+    forecast_BIC['Date'],
+    forecast_BIC['Percentile_25'],
+    forecast_BIC['Percentile_75'],
+    color='orange', alpha=0.4, label='50% Prediction Interval'
+)
+
+# Add labels, title, and legend
+ax.set_title('Predicted Price and Prediction Intervals', fontsize=16)
+ax.set_xlabel('Date', fontsize=12)
+ax.set_ylabel('Price', fontsize=12)
+ax.legend()
+ax.grid(True)
+
+# Show the plot
+plt.tight_layout()
+plt.show()
+test=5
+
 
 ### create point forecasting graphs of mae and rmse ###
 # list to store loaded DataFrames along with their filenames
@@ -171,3 +234,6 @@ plt.xticks([1, 10, 100, 1000], ['10^0', '10^1', '10^2', '10^3'])
 plt.axhline(y=CRPS_BIC, color=color_1, linestyle='--', label='LQRA(BIC)')
 plt.legend()
 plt.show()
+
+
+
