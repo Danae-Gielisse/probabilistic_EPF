@@ -18,8 +18,8 @@ LAMBDA = np.concatenate(([0], np.logspace(-1, 3, 19)))
 time_span = 1
 
 # define folders
-results_point_forecasts_time_span_folder = f'Results/point_forecasting_time_span_{time_span}'
-output_folder = f'Results/probabilistic_forecasts_time_span_{time_span}'
+results_point_forecasts_time_span_folder = f'../Results/point_forecasting_time_span_{time_span}'
+output_folder = f'../Results/probabilistic_forecasts_time_span_{time_span}'
 
 # load point forecast data
 X_list = []

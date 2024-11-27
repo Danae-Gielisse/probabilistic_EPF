@@ -12,8 +12,8 @@ calib = 364
 time_span = 1 # Choose the time span
 
 # folders where the csv files are located
-folder_BIC_df = f'Results/probabilistic_forecasts_time_span_{time_span}/BIC_df.csv'
-folder_forecast_BIC = f'Results/probabilistic_forecasts_time_span_{time_span}/forecast_BIC.csv'
+folder_BIC_df = f'../Results/probabilistic_forecasts_time_span_{time_span}/BIC_df.csv'
+folder_forecast_BIC = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_BIC.csv'
 
 # get number of days in test period
 days_mapping = {1: 735, 2: 613}
@@ -23,8 +23,8 @@ def preload_forecasts(lambda_values, time_span):
     forecast_data = {}
     beta_data = {}
     for l in lambda_values:
-        forecast_path = f'Results/probabilistic_forecasts_time_span_{time_span}/forecast_lambda_{l}.csv'
-        beta_path = f'Results/probabilistic_forecasts_time_span_{time_span}/beta_lambda_{l}.csv'
+        forecast_path = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_lambda_{l}.csv'
+        beta_path = f'../Results/probabilistic_forecasts_time_span_{time_span}/beta_lambda_{l}.csv'
         forecast_data[l] = pd.read_csv(forecast_path)
         beta_data[l] = pd.read_csv(beta_path)
     return forecast_data, beta_data
@@ -99,7 +99,7 @@ lambda_dict = {lmbda: i for i, lmbda in enumerate(LAMBDA)}
 # create list of al forecast dataframes
 forecast_list = []
 for i in range(0, len(LAMBDA)):
-    probabilistic_forecast_folder = f'Results/probabilistic_forecasts_time_span_{time_span}/forecast_lambda_' + str(LAMBDA[i]) + '.csv'
+    probabilistic_forecast_folder = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_lambda_' + str(LAMBDA[i]) + '.csv'
     forecast = pd.read_csv(probabilistic_forecast_folder)
     forecast_list.append(forecast)
 

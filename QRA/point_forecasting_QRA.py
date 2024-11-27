@@ -23,11 +23,11 @@ time_span = 1
 if time_span == 1:
     start_date = '2016-01-01'
     end_date = '2021-01-01'
-    results_point_forecasts_time_span_folder = 'Results/point_forecasting_time_span_1'
+    results_point_forecasts_time_span_folder = '../Results/point_forecasting_time_span_1'
 else:
     start_date = '2020-01-01'
     end_date = '2024-09-01'
-    results_point_forecasts_time_span_folder = 'Results/point_forecasting_time_span_2'
+    results_point_forecasts_time_span_folder = '../Results/point_forecasting_time_span_2'
 
 # filter on start date and end date (not included)
 data = data[(data['datetime'] >= start_date) & (data['datetime'] < end_date)]
