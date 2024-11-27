@@ -1,5 +1,8 @@
 """
-Computation of the probabilistic forecasts
+Code based on matlab code from Uniejewski, B., & Weron, R. (2021).
+Regularized quantile regression averaging for probabilistic electricity price forecasting. Energy Economics, 95, 105121.
+
+Computation of the probabilistic forecasts for the QRA methods
 """
 
 
@@ -12,7 +15,7 @@ from joblib import Parallel, delayed
 # parameters
 WIN = range(56, 729, 28)
 LAMBDA = np.concatenate(([0], np.logspace(-1, 3, 19)))
-time_span = 2
+time_span = 1
 
 # define folders
 results_point_forecasts_time_span_folder = f'Results/point_forecasting_time_span_{time_span}'
