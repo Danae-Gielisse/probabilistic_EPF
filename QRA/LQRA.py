@@ -11,6 +11,14 @@ import pandas as pd
 from scipy.optimize import linprog
 import os
 from joblib import Parallel, delayed
+from scipy.optimize import minimize
+
+# choose to use LQRA or EQRA
+LQRA = False # if False, then perform EQRA
+# choose alpha value for EQRA
+alph = 1
+
+
 
 # parameters
 WIN = range(56, 729, 28)
@@ -73,7 +81,10 @@ def QRA(price, x, tau, lambda_val):
         X = x[hour::24, :]
         X_fut = X[-1, :]
 
-        prediction[hour, :], beta_matrix[hour] = QRA_LASSO(Y, X[:-1, :], X_fut, tau, lambda_val)
+        if LQRA:
+            prediction[hour, :], beta_matrix[hour] = QRA_LASSO(Y, X[:-1, :], X_fut, tau, lambda_val)
+        else:
+            prediction[hour, :], beta_matrix[hour] = QRA_elastic_net(Y, X[:-1, :], X_fut, tau, lambda_val, alph)
 
     return prediction, beta_matrix
 
@@ -93,6 +104,37 @@ def QRA_LASSO(y, x, x_fut, tau, lambda_val):
         res = linprog(f, A_eq=Aeq, b_eq=beq, bounds=list(zip(lb, ub)), options=options)
 
         beta = res.x[-2 * m: -m] - res.x[-m:]
+        forecast[i] = np.dot(x_fut, beta)
+        beta_list.append(beta)
+
+    forecast = np.sort(forecast)
+    return forecast, beta_list
+
+
+def QRA_elastic_net(y, x, x_fut, tau, lambda_val, alpha):
+    n, m = x.shape
+    forecast = np.full(len(tau), np.nan)
+    beta_list = []
+
+    def objective(beta, q):
+        residuals = y - np.dot(x, beta)
+        l1_penalty = lambda_val * alpha * np.sum(np.abs(beta))
+        l2_penalty = lambda_val * (1 - alpha) * 0.5 * np.sum(beta ** 2)
+        return np.sum(np.maximum(q * residuals, (q - 1) * residuals)) + l1_penalty + l2_penalty
+
+    for i, q in enumerate(tau):
+        # Initial guess for beta
+        beta_init = np.zeros(m)
+
+        # Optimization
+        res = minimize(
+            fun=lambda b: objective(b, q),
+            x0=beta_init,
+            method='SLSQP',
+            options={'disp': False}
+        )
+
+        beta = res.x
         forecast[i] = np.dot(x_fut, beta)
         beta_list.append(beta)
 
@@ -132,7 +174,7 @@ def compute_for_lambda(lambda_val, folder):
     beta_df.to_csv(beta_file, index=False)
 
 if __name__ == "__main__":
-    lambda_values = LAMBDA[[19]]
+    lambda_values = LAMBDA[[10]]
     for l in lambda_values:
         l_val = l
         compute_for_lambda(l_val, output_folder)
