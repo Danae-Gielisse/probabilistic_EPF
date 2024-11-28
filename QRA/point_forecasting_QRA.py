@@ -13,11 +13,11 @@ from scipy.stats import norm
 from concurrent.futures import ProcessPoolExecutor
 
 # import the data
-processed_data_folder = 'Data/processed data'
+processed_data_folder = '../Data/processed data'
 data = pd.read_csv(os.path.join(processed_data_folder, "data.csv"))
 
 # choose time span
-time_span = 1
+time_span = 2
 
 # set correct values for the different time spans
 if time_span == 1:
@@ -50,13 +50,12 @@ Exg = data[["load_forecast", "total_generation"]]
 Dummies = data['day_of_week'].to_frame()
 Date = data['datetime'].to_frame()
 
-# create empty list for results of mea and rmse
-mea_and_rmse_list = []
 
 '''
 Function that saves the results of the point forecasting
 '''
 def save_forecast(win):
+    print('started win ' + str(win))
     forecast = point(Date, Price, Exg, Dummies, win, 728)
     name = "window_" + str(win)
     output_path = os.path.join(results_point_forecasts_time_span_folder, name + ".csv")
@@ -109,7 +108,7 @@ def ARX(price, exg, dummies, calib):
     idx24 = np.arange(7 * 24 - 1, 24 * calib, 24)
 
     # predict the price for every hour
-    for hour in range(1,25):
+    for hour in range(1, 25):
         # calculate index of d-1,h
         idx = np.arange(hour + 6 * 24 - 1, 24 * calib, 24)
         # calculate index of d,h
@@ -172,6 +171,6 @@ def point(Date, Price, Exg, Dummies, calib, max_calib):
 if __name__ == '__main__':
     # execute forecasts in parallel
     with ProcessPoolExecutor() as executor:
-        executor.map(save_forecast, range(199, 729))
+        executor.map(save_forecast, range(28, 729))
 
 
