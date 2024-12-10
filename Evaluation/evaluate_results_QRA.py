@@ -4,25 +4,46 @@ import statistics
 from scipy.stats import chi2
 import os
 
-# choose time span
-time_span = 2
-# choose nominal coverage and significance level
+# choose time span, alpha and nominal coverage
+time_span = 1
+alpha = 0 # choose 0, 0.25, 0.5 or 0.75
 percentage = 0.5
-significance_level = 0.01
 
-forecast_path = f'Results/probabilistic_forecasts_time_span_{time_span}'
-cprs_path = f'Results/Evaluation_metrics/CPRS_ts{time_span}.csv'
-PICP_path = f'Results/Evaluation_metrics/emperical_coverage_ts{time_span}_nc{percentage}.csv'
+significance_levels = [0.01, 0.05, 0.1]
 
-# create list of all forecasts for all lambdas
+# define paths
+forecast_path = f'../Results/probabilistic_forecasts_time_span_{time_span}'
+if alpha != 0:
+    cprs_path = f'../Results/Evaluation_metrics/CRPS_ts{time_span}_alpha_{alpha}.csv'
+    forecast_BIC = pd.read_csv(os.path.join(forecast_path, f'forecast_BIC_alpha_{alpha}.csv'),
+                               index_col=[0, 1]).reset_index(drop=True)
+    kupiec_output_path = f'../Results/Evaluation_metrics/kupiec_passes_alpha_{alpha}_nc{percentage}_ts{time_span}'
+    ec_path_output = f'../Results/Evaluation_metrics/empirical_coverage_alpha_{alpha}_nc{percentage}_ts{time_span}.csv'
+
+else:
+    cprs_path = f'../Results/Evaluation_metrics/CRPS_ts{time_span}.csv'
+    forecast_BIC = pd.read_csv(os.path.join(forecast_path, f'forecast_BIC.csv'),
+                               index_col=[0, 1]).reset_index(drop=True)
+    kupiec_output_path = f'../Results/Evaluation_metrics/kupiec_passes_nc{percentage}_ts{time_span}'
+    ec_path_output = f'../Results/Evaluation_metrics/empirical_coverage_nc{percentage}_ts{time_span}.csv'
+
+# define correct lambda array
 LAMBDA = np.concatenate(([0], np.logspace(-1, 3, 19)))
+if alpha != 0:
+    if time_span == 1:
+        LAMBDA = LAMBDA[[8, 9, 10, 11, 12, 13, 14, 15, 16, 17]]
+    else:
+        LAMBDA = LAMBDA[[9, 10, 11, 12, 13, 14, 15, 16, 18, 19]]
 
 forecast_list = []
 for i in range(0, len(LAMBDA)):
-    probabilistic_forecast_folder = os.path.join(forecast_path, 'forecast_lambda_' + str(LAMBDA[i]) + '.csv')
+    if alpha != 0:
+        probabilistic_forecast_folder = os.path.join(forecast_path, 'forecast_lambda_' + str(LAMBDA[i]) + '_alpha_' + str(alpha) + '.csv')
+    else:
+        probabilistic_forecast_folder = os.path.join(forecast_path, 'forecast_lambda_' + str(LAMBDA[i]) + '.csv')
     forecast = pd.read_csv(probabilistic_forecast_folder)
     forecast_list.append(forecast)
-"""
+
 def create_CRPS_matrix(forecast):
     number_of_days = int(round(len(forecast) / 24))
     crps_df = pd.DataFrame(index=range(0, number_of_days), columns=range(0, 24))
@@ -62,10 +83,9 @@ def pinball_score(tau, day, hour, forecast):
 
     return pinball
 
-
+"""
 # compute CPRS for BIC
-forecast = pd.read_csv(os.path.join(forecast_path, 'forecast_BIC.csv'), index_col=[0, 1]).reset_index(drop=True)
-CRPS_BIC_df = create_CRPS_matrix(forecast)
+CRPS_BIC_df = create_CRPS_matrix(forecast_BIC)
 average_CRPS_BIC = CRPS_BIC_df['average_pinball_score_day'].mean()
 
 # create df for mean CPRS for every lambda
@@ -154,38 +174,70 @@ def kupiec_test(emperical_coverage_list, confidence_level):
     return p_value
 
 
-# perform kupiec test for LQRA(BIC) and LQRA(46)
-forecast_list_2 = []
-forecast_BIC = pd.read_csv(os.path.join(forecast_path, 'forecast_BIC.csv'), index_col=[0, 1]).reset_index(drop=True)
-forecast_list_2.append(forecast_BIC)
-forecast_list_2.append(pd.read_csv(os.path.join(forecast_path, 'forecast_lambda_46.41588833612777.csv')))
-number_of_passes_dict = {}
-for i, forecast in enumerate(forecast_list_2):
-    # perform the kupiec test for all 24 hours
-    kupiec_list = []
-    for hour in range(0, 24):
-        ec_hour, coverage_list_hour = empirical_coverage_hour(forecast, percentage, hour)
-        kupiec = kupiec_test(coverage_list_hour, 1-percentage)
-        kupiec_list.append(kupiec)
+kupiec_results = []
+LAMBDA = np.append(LAMBDA, -1)# for BIC
+for significance_level in significance_levels:
+    level_results = []
+    for lambda_value in LAMBDA:
+        if lambda_value == -1: # then BIC forecast needed
+            if alpha != 0:
+                forecast_path = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_BIC_alpha_{alpha}.csv'
+            else:
+                forecast_path = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_BIC.csv'
+        else:
+            if alpha != 0:
+                forecast_path = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_lambda_{lambda_value}_alpha_{alpha}.csv'
+            else:
+                forecast_path = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_lambda_{lambda_value}.csv'
+        forecast = pd.read_csv(forecast_path)
 
-    number_of_passes = 0
-    for j in kupiec_list:
-        if j <= significance_level:
-            number_of_passes += 1
+        # perform kupiec test
+        number_of_passes_dict = {}
+        # perform the kupiec test for all 24 hours
+        kupiec_list = []
+        for hour in range(0, 24):
+            ec_hour, coverage_list_hour = empirical_coverage_hour(forecast, percentage, hour)
+            kupiec = kupiec_test(coverage_list_hour, 1-percentage)
+            kupiec_list.append(kupiec)
 
-    if i == 0:
-        number_of_passes_dict['LQRA(BIC)'] = number_of_passes
-    elif i == 1:
-        number_of_passes_dict['LQRA(46)'] = number_of_passes
+        # count number of passes
+        number_of_passes = 0
+        for j in kupiec_list:
+            if j <= significance_level:
+                number_of_passes += 1
+        level_results.append(number_of_passes)
 
-# create dataframe for empirical coverage in general
-df_empirical_coverage = pd.DataFrame(index=['Empirical_coverage'], columns=LAMBDA)
-for i in range(0, len(forecast_list)):
-    coverage, _ = empirical_coverage(forecast_list[i], percentage)
-    df_empirical_coverage.loc['Empirical_coverage', LAMBDA[i]] = coverage
-# add coverage LQRA(BIC)
-coverage_BIC, _ = empirical_coverage(forecast_BIC, percentage)
-df_empirical_coverage.loc['Empirical_coverage', 'BIC'] = coverage_BIC
+    # append the level results to the kupiec_list
+    kupiec_results.append(level_results)
 
-# save PICP dataframe
-df_empirical_coverage.to_csv(PICP_path)
+# create df with number of passes for each run
+kupiec_df = pd.DataFrame(kupiec_results, columns=LAMBDA, index=[f"sig_{sl}" for sl in significance_levels])
+kupiec_df = kupiec_df.rename(columns={'-1': 'BIC'})
+
+# save dataframe
+kupiec_df.to_csv(kupiec_output_path)
+
+coverage_results = []
+for lambda_value in LAMBDA:
+    if lambda_value == -1:  # then BIC forecast needed
+        if alpha != 0:
+            forecast_path = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_BIC_alpha_{alpha}.csv'
+        else:
+            forecast_path = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_BIC.csv'
+    else:
+        if alpha != 0:
+            forecast_path = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_lambda_{lambda_value}_alpha_{alpha}.csv'
+        else:
+            forecast_path = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_lambda_{lambda_value}.csv'
+    forecast = pd.read_csv(forecast_path)
+    # calculate empirical coverage
+    coverage, _ = empirical_coverage(forecast, percentage)
+    # add coverage to results list
+    coverage_results.append(coverage)
+
+# create results dataframe
+ec_df = pd.DataFrame([coverage_results], columns=LAMBDA)
+ec_df = ec_df.rename(columns={'-1': 'BIC'})
+
+# save CRPS dataframe
+ec_df.to_csv(ec_path_output)
