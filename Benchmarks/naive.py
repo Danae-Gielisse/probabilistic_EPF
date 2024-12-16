@@ -33,3 +33,6 @@ forecast.loc[forecast['weekday'].isin(shift_168), 'forecasted_price'] = \
 forecast = forecast.reset_index(drop=True)
 forecast = forecast.drop(columns=['weekday'])
 forecast = forecast.rename(columns={'price': 'price_real'})
+
+# save forecast
+forecast.to_csv(f'../Results/point_forecasting_time_span_{time_span}/naive_benchmark.csv')
