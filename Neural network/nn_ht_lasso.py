@@ -3,7 +3,7 @@ Most of this code is adopted from:
 Marcjasz, G., Narajewski, M., Weron, R., & Ziel, F. (2023). Distributional neural networks for electricity price
 forecasting. Energy Economics, 125, 106843.
 
-Run this file to perform the hyperparameter tuning for the neural network methods.
+Run this file to perform the hyperparameter tuning for the DDNN lasso methods.
 """
 
 import os
