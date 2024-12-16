@@ -5,25 +5,23 @@ Regularized quantile regression averaging for probabilistic electricity price fo
 Computation of the probabilistic forecasts for the QRA methods
 """
 
-
 import numpy as np
 import pandas as pd
 from scipy.optimize import linprog
 import os
 from joblib import Parallel, delayed
-from scipy.optimize import minimize
+import cvxpy as cp
 
 # choose to use LQRA or EQRA
-LQRA = False # if False, then perform EQRA
+LQRA = True # if False, then perform EQRA
 # choose alpha value for EQRA
-alph = 1
+alph = 0.25 # choose 0.25, 0.5 or 0.75
+# choose time span
+time_span = 1
 
-
-
-# parameters
+# define parameters
 WIN = range(56, 729, 28)
 LAMBDA = np.concatenate(([0], np.logspace(-1, 3, 19)))
-time_span = 1
 
 # define folders
 results_point_forecasts_time_span_folder = f'../Results/point_forecasting_time_span_{time_span}'
@@ -72,6 +70,7 @@ def probabilistic_single_day(Date, Price, X, calib, tau, lambda_val, day):
 
     return forecast, beta_results
 
+
 def QRA(price, x, tau, lambda_val):
     prediction = np.full((24, len(tau)), np.nan)
     beta_matrix = [[None] * len(tau) for _ in range(24)]
@@ -87,6 +86,7 @@ def QRA(price, x, tau, lambda_val):
             prediction[hour, :], beta_matrix[hour] = QRA_elastic_net(Y, X[:-1, :], X_fut, tau, lambda_val, alph)
 
     return prediction, beta_matrix
+
 
 def QRA_LASSO(y, x, x_fut, tau, lambda_val):
     n, m = x.shape
@@ -111,33 +111,45 @@ def QRA_LASSO(y, x, x_fut, tau, lambda_val):
     return forecast, beta_list
 
 
-def QRA_elastic_net(y, x, x_fut, tau, lambda_val, alpha):
+def QRA_elastic_net(y, x, x_fut, tau, lambda_val, gamma):
     n, m = x.shape
-    forecast = np.full(len(tau), np.nan)
+    forecast = np.zeros(len(tau))
     beta_list = []
 
-    def objective(beta, q):
-        residuals = y - np.dot(x, beta)
-        l1_penalty = lambda_val * alpha * np.sum(np.abs(beta))
-        l2_penalty = lambda_val * (1 - alpha) * 0.5 * np.sum(beta ** 2)
-        return np.sum(np.maximum(q * residuals, (q - 1) * residuals)) + l1_penalty + l2_penalty
+    # convert input to array
+    x = np.asarray(x)
+    y = np.asarray(y)
+    x_fut = np.asarray(x_fut)
+
+    # CVXPY variabeles
+    beta = cp.Variable(m)
+    u = cp.Variable(n)  # positive deviations
+    v = cp.Variable(n)  # negative deviations
 
     for i, q in enumerate(tau):
-        # Initial guess for beta
-        beta_init = np.zeros(m)
+        # construct objective function
+        l1_term = lambda_val * (1 - gamma) * cp.norm1(beta)
+        l2_term = lambda_val * gamma * cp.sum_squares(beta)
+        quantile_term = q * cp.sum(u) + (1 - q) * cp.sum(v)
+        objective = cp.Minimize(quantile_term + l1_term + l2_term)
 
-        # Optimization
-        res = minimize(
-            fun=lambda b: objective(b, q),
-            x0=beta_init,
-            method='SLSQP',
-            options={'disp': False}
-        )
+        # construct constraints
+        constraints = [
+            y - x @ beta == u - v,
+            u >= 0,
+            v >= 0
+        ]
 
-        beta = res.x
-        forecast[i] = np.dot(x_fut, beta)
-        beta_list.append(beta)
+        # solve minimalization problem
+        prob = cp.Problem(objective, constraints)
+        prob.solve(solver=cp.ECOS, abstol=1e-5, reltol=1e-5, max_iters=5000, verbose=False)
 
+        # save results
+        beta_vals = beta.value
+        forecast[i] = np.dot(x_fut, beta_vals)
+        beta_list.append(beta_vals)
+
+    # sort the quantiles
     forecast = np.sort(forecast)
     return forecast, beta_list
 
@@ -155,6 +167,8 @@ def compute_for_lambda(lambda_val, folder):
     calib = 364
     tau = np.arange(1, 100) / 100
 
+    test = probabilistic_single_day(date, Y, X, calib, tau, lambda_val, calib)
+
     results = Parallel(n_jobs=-1)(
         delayed(probabilistic_single_day)(date, Y, X, calib, tau, lambda_val, day)
         for day in range(calib, D)
@@ -168,13 +182,18 @@ def compute_for_lambda(lambda_val, folder):
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-    forecast_file = os.path.join(folder, f'forecast_lambda_{lambda_val}.csv')
+    if LQRA:
+        forecast_file = os.path.join(folder, f'forecast_lambda_{lambda_val}.csv')
+        beta_file = os.path.join(folder, f'beta_lambda_{lambda_val}.csv')
+    else:
+        forecast_file = os.path.join(folder, f'forecast_lambda_{lambda_val}_alpha_{alph}.csv')
+        beta_file = os.path.join(folder, f'beta_lambda_{lambda_val}_alpha_{alph}.csv')
+
     forecast_df.to_csv(forecast_file, index=False)
-    beta_file = os.path.join(folder, f'beta_lambda_{lambda_val}.csv')
     beta_df.to_csv(beta_file, index=False)
 
 if __name__ == "__main__":
-    lambda_values = LAMBDA[[10]]
+    lambda_values = LAMBDA[[19]]
     for l in lambda_values:
         l_val = l
         compute_for_lambda(l_val, output_folder)
