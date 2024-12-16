@@ -1,3 +1,11 @@
+"""
+Most of this code is adopted from:
+Marcjasz, G., Narajewski, M., Weron, R., & Ziel, F. (2023). Distributional neural networks for electricity price
+forecasting. Energy Economics, 125, 106843.
+
+Run this file to perform the hyperparameter tuning for the neural network methods.
+"""
+
 import os
 import sys
 import numpy as np
@@ -231,10 +239,9 @@ def objective(trial):
 # begin optuna study
 optuna.logging.get_logger('optuna').addHandler(logging.StreamHandler(sys.stdout))
 study_name = f'FINAL_NL_selection_prob_{distribution.lower()}{run}_ts{time_span}'
-storage_name = f'sqlite:///../Results/hyperparameter_tuning{study_name}'
+storage_name = f'sqlite:///../Results/hyperparameter_tuning/{study_name}'
 study = optuna.create_study(study_name=study_name, storage=storage_name, load_if_exists=True)
-study.optimize(objective, n_trials=40, show_progress_bar=True)
+study.optimize(objective, n_trials=350, show_progress_bar=True)
 best_params = study.best_params
 print(best_params)
 print(study.trials_dataframe())
-df = study.trials_dataframe()
