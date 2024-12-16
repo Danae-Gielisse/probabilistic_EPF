@@ -6,28 +6,49 @@ forecast dataframe for the BIC.
 import numpy as np
 import pandas as pd
 
+# choose time span and regularization method
+time_span = 1 # Choose the time span 1 or 2
+alpha = 0.5 # choose 0, 0.25, 0.5 or 0.75 (0 for LQRA)
+
+# define correct lambda array
 LAMBDA = np.concatenate(([0], np.logspace(-1, 3, 19)))
+if alpha != 0:
+    if time_span == 1:
+        LAMBDA = LAMBDA[[8, 9, 10, 11, 12, 13, 14, 15, 16, 17]]
+    else:
+        LAMBDA = LAMBDA[[9, 10, 11, 12, 13, 14, 15, 16, 18, 19]]
+
+# define tau values and the length of the calibration window
 TAU = np.arange(1, 100) / 100
 calib = 364
-time_span = 1 # Choose the time span
 
 # folders where the csv files are located
-folder_BIC_df = f'../Results/probabilistic_forecasts_time_span_{time_span}/BIC_df.csv'
-folder_forecast_BIC = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_BIC.csv'
+if alpha != 0:
+    folder_BIC_df = f'../Results/probabilistic_forecasts_time_span_{time_span}/BIC_df_alpha_{alpha}.csv'
+    folder_forecast_BIC = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_BIC_alpha_{alpha}.csv'
+else:
+    folder_BIC_df = f'../Results/probabilistic_forecasts_time_span_{time_span}/BIC_df.csv'
+    folder_forecast_BIC = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_BIC.csv'
 
 # get number of days in test period
 days_mapping = {1: 735, 2: 613}
 number_of_days = days_mapping.get(time_span)
 
+
 def preload_forecasts(lambda_values, time_span):
     forecast_data = {}
     beta_data = {}
     for l in lambda_values:
-        forecast_path = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_lambda_{l}.csv'
-        beta_path = f'../Results/probabilistic_forecasts_time_span_{time_span}/beta_lambda_{l}.csv'
+        if alpha != 0: # for the elastic net version
+            forecast_path = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_lambda_{l}_alpha_{alpha}.csv'
+            beta_path = f'../Results/probabilistic_forecasts_time_span_{time_span}/beta_lambda_{l}_alpha_{alpha}.csv'
+        else: # for the lasso version
+            forecast_path = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_lambda_{l}.csv'
+            beta_path = f'../Results/probabilistic_forecasts_time_span_{time_span}/beta_lambda_{l}.csv'
         forecast_data[l] = pd.read_csv(forecast_path)
         beta_data[l] = pd.read_csv(beta_path)
     return forecast_data, beta_data
+
 
 def create_df_BIC(lambda_values, tau_values, total_days, calib, time_span):
     forecast_data, beta_data = preload_forecasts(lambda_values, time_span)
@@ -36,9 +57,9 @@ def create_df_BIC(lambda_values, tau_values, total_days, calib, time_span):
     for day in range(total_days):
         print(f'Starting day {day}')
         for hour in range(24):
-            print(f'Starting hour {hour}')
+            #print(f'Starting hour {hour}')
             for q in tau_values:
-                min_BIC, min_lambda = calculate_min_BIC(lambda_values, q, day, hour, calib, time_span, forecast_data, beta_data)
+                min_BIC, min_lambda = calculate_min_BIC(lambda_values, q, day, hour, calib, forecast_data, beta_data)
                 results.append({
                     'day': day,
                     'hour': hour,
@@ -49,7 +70,8 @@ def create_df_BIC(lambda_values, tau_values, total_days, calib, time_span):
 
     return pd.DataFrame(results)
 
-def calculate_min_BIC(lambda_values, tau, day, hour, calib, time_span, forecast_data, beta_data):
+
+def calculate_min_BIC(lambda_values, tau, day, hour, calib, forecast_data, beta_data):
     min_BIC = np.inf
     min_lambda = None
     for l in lambda_values:
@@ -59,6 +81,7 @@ def calculate_min_BIC(lambda_values, tau, day, hour, calib, time_span, forecast_
             min_lambda = l
 
     return min_BIC, min_lambda
+
 
 def BIC(tau, day, hour, lambda_value, calib, forecast_data, beta_data):
     forecast = forecast_data[lambda_value]
@@ -85,13 +108,14 @@ def BIC(tau, day, hour, lambda_value, calib, forecast_data, beta_data):
 
     return first_term + second_term
 
+
 # create dataframe BIC
 df_BIC = create_df_BIC(LAMBDA, TAU, number_of_days, calib, time_span)
 # save dataframe BIC
 df_BIC.to_csv(folder_BIC_df, index=False)
 
 ### create forecast BIC dataframe ###
-df_BIC = pd.read_csv(folder_BIC_df) # for case run seperate from the code above
+df_BIC = pd.read_csv(folder_BIC_df)
 
 # create dictionairy for lambda
 lambda_dict = {lmbda: i for i, lmbda in enumerate(LAMBDA)}
