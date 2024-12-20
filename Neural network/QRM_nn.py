@@ -43,7 +43,7 @@ data = pd.read_csv('../Data/processed data/data.csv')
 if time_span == 1:
     subset = data.loc[29376:43847, ['datetime']]
 else:
-    subset = data.loc[62472:75985 , ['datetime']]
+    subset = data.loc[62472:75985, ['datetime']]
 
 run_list = [1, 2, 3, 4]
 df_list = []

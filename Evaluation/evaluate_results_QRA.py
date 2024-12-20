@@ -5,8 +5,8 @@ from scipy.stats import chi2
 import os
 
 # choose time span, alpha and nominal coverage
-time_span = 1
-alpha = 0 # choose 0, 0.25, 0.5 or 0.75
+time_span = 2
+alpha = 0.25 # choose 0, 0.25, 0.5 or 0.75
 percentage = 0.5
 
 significance_levels = [0.01, 0.05, 0.1]
@@ -17,6 +17,7 @@ if alpha != 0:
     cprs_path = f'../Results/Evaluation_metrics/CRPS_ts{time_span}_alpha_{alpha}.csv'
     forecast_BIC = pd.read_csv(os.path.join(forecast_path, f'forecast_BIC_alpha_{alpha}.csv'),
                                index_col=[0, 1]).reset_index(drop=True)
+    forecast_EQRA = pd.read_csv(os.path.join(forecast_path, 'forecast_BIC_EQRA.csv'))
     kupiec_output_path = f'../Results/Evaluation_metrics/kupiec_passes_alpha_{alpha}_nc{percentage}_ts{time_span}'
     ec_path_output = f'../Results/Evaluation_metrics/empirical_coverage_alpha_{alpha}_nc{percentage}_ts{time_span}.csv'
 
@@ -83,10 +84,13 @@ def pinball_score(tau, day, hour, forecast):
 
     return pinball
 
-"""
+
 # compute CPRS for BIC
 CRPS_BIC_df = create_CRPS_matrix(forecast_BIC)
 average_CRPS_BIC = CRPS_BIC_df['average_pinball_score_day'].mean()
+if alpha != 0:
+    CRPS_EQRA_df = create_CRPS_matrix(forecast_EQRA)
+    average_CRPS_EQRA = CRPS_EQRA_df['average_pinball_score_day'].mean()
 
 # create df for mean CPRS for every lambda
 df_mean_CRPS = pd.DataFrame(index=['CRPS'])
@@ -98,10 +102,12 @@ for i in range(0, len(forecast_list)):
     df_mean_CRPS[str(lambda_value)] = average_CPRS
 # add BIC result to CRPS_df
 df_mean_CRPS['BIC'] = average_CRPS_BIC
+if alpha != 0:
+    df_mean_CRPS['EQRA(BIC)'] = average_CRPS_EQRA
 
 # save CPRS dataframe
 df_mean_CRPS.to_csv(cprs_path)
-"""
+
 
 ### methods for computing emperical coverage ###
 '''
@@ -173,7 +179,7 @@ def kupiec_test(emperical_coverage_list, confidence_level):
 
     return p_value
 
-
+"""
 kupiec_results = []
 LAMBDA = np.append(LAMBDA, -1)# for BIC
 for significance_level in significance_levels:
@@ -241,3 +247,5 @@ ec_df = ec_df.rename(columns={'-1': 'BIC'})
 
 # save CRPS dataframe
 ec_df.to_csv(ec_path_output)
+
+"""

@@ -16,11 +16,11 @@ color_4 = '#6A5ACD'
 
 # choose time span
 time_span = 1
-folder_point = f'Results/point_forecasting_time_span_{time_span}'
-folder_coverage_90 = f'Results/Evaluation_metrics/emperical_coverage_ts{time_span}_nc0.9.csv'
-folder_coverage_50 = f'Results/Evaluation_metrics/emperical_coverage_ts{time_span}_nc0.5.csv'
-folder_CPRS = f'Results/Evaluation_metrics/CPRS_ts{time_span}.csv'
-folder_BIC = f'Results/probabilistic_forecasts_time_span_{time_span}/forecast_BIC.csv'
+folder_point = f'../Results/point_forecasting_time_span_{time_span}'
+folder_coverage_90 = f'../Results/Evaluation_metrics/emperical_coverage_ts{time_span}_nc0.9.csv'
+folder_coverage_50 = f'../Results/Evaluation_metrics/emperical_coverage_ts{time_span}_nc0.5.csv'
+folder_CPRS = f'../Results/Evaluation_metrics/CPRS_ts{time_span}.csv'
+folder_BIC = f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_BIC.csv'
 
 ### create plot prediction intervals ###
 forecast_BIC = pd.read_csv(folder_BIC, index_col=0).reset_index(drop=True)

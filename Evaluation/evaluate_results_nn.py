@@ -4,16 +4,19 @@ import statistics
 from scipy.stats import chi2
 
 # choose time span, regularization and distribution
-time_span = 1
+time_span = 2
 regularization = 'lasso' # choose lasso or enet
 distribution = 'point'
-run_list = [1, 2, 3, 4, 'pEns', 'qEns']
+if distribution == 'point':
+    run_list = ['qra', 'qrm']
+else:
+    run_list = [1, 2, 3, 4, 'pEns', 'qEns']
 
 # choose nominal coverage
-percentage = 0.9
+percentage = 0.5
 significance_levels = [0.01, 0.05, 0.1]
 
-
+'''
 def create_CRPS_matrix(forecast):
     number_of_days = int(round(len(forecast) / 24))
     crps_df = pd.DataFrame(index=range(0, number_of_days), columns=range(0, 24))
@@ -66,7 +69,7 @@ if distribution == 'jsu':
 
     # create results dataframe
     CRPS_df = pd.DataFrame([CRPS_result_list], columns=run_list)
-    crps_path_output = f'../Results/Evaluation_metrics/CPRS_{distribution}_{regularization}_ts{time_span}.csv'
+    crps_path_output = f'../Results/Evaluation_metrics/CRPS_{distribution}_{regularization}_ts{time_span}.csv'
 
     # save CRPS dataframe
     CRPS_df.to_csv(crps_path_output)
@@ -85,11 +88,11 @@ else: # if distribution equals point
 
     # create results dataframe
     CRPS_df = pd.DataFrame([CRPS_result_list], columns=method_list)
-    crps_path_output = f'../Results/Evaluation_metrics/CPRS_{distribution}_ts{time_span}.csv'
+    crps_path_output = f'../Results/Evaluation_metrics/CRPS_{distribution}_ts{time_span}.csv'
 
     # save CRPS dataframe
     CRPS_df.to_csv(crps_path_output)
-
+'''
 
 
 ### methods for computing emperical coverage ###
@@ -168,8 +171,13 @@ kupiec_results = []
 for significance_level in significance_levels:
     level_results = []
     for run in run_list:
-        forecast_path = f'../Results/percentiles_NN_time_span_{time_span}/percentiles_{distribution}{run}_{regularization}.csv'
-        forecast = pd.read_csv(forecast_path, index_col=0)
+        if distribution == 'point':
+            forecast_path = f'../Results/percentiles_NN_time_span_{time_span}/percentiles_{distribution}_{run}.csv'
+            forecast = pd.read_csv(forecast_path)
+        else:
+            forecast_path = f'../Results/percentiles_NN_time_span_{time_span}/percentiles_{distribution}{run}_{regularization}.csv'
+            forecast = pd.read_csv(forecast_path, index_col=0)
+
 
         # perform kupiec test
         number_of_passes_dict = {}
@@ -192,14 +200,21 @@ for significance_level in significance_levels:
 
 # create df with number of passes for each run
 kupiec_df = pd.DataFrame(kupiec_results, columns=run_list, index=[f"sig_{sl}" for sl in significance_levels])
-kupiec_output_path = f'../Results/Evaluation_metrics/kupiec_passes_{distribution}_{regularization}_nc{percentage}_ts{time_span}.csv'
+if distribution == 'point':
+    kupiec_output_path = f'../Results/Evaluation_metrics/kupiec_passes_{distribution}_nc{percentage}_ts{time_span}.csv'
+else:
+    kupiec_output_path = f'../Results/Evaluation_metrics/kupiec_passes_{distribution}_{regularization}_nc{percentage}_ts{time_span}.csv'
 # save dataframe
 kupiec_df.to_csv(kupiec_output_path)
 
 coverage_results = []
 for run in run_list:
-    forecast_path = f'../Results/percentiles_NN_time_span_{time_span}/percentiles_{distribution}{run}_{regularization}.csv'
-    forecast = pd.read_csv(forecast_path, index_col=0)
+    if distribution == 'point':
+        forecast_path = f'../Results/percentiles_NN_time_span_{time_span}/percentiles_{distribution}_{run}.csv'
+        forecast = pd.read_csv(forecast_path)
+    else:
+        forecast_path = f'../Results/percentiles_NN_time_span_{time_span}/percentiles_{distribution}{run}_{regularization}.csv'
+        forecast = pd.read_csv(forecast_path, index_col=0)
     # calculate empirical coverage
     coverage, _ = empirical_coverage(forecast, percentage)
     # add coverage to results list
@@ -207,7 +222,10 @@ for run in run_list:
 
 # create results dataframe
 ec_df = pd.DataFrame([coverage_results], columns=run_list)
-ec_path_output = f'../Results/Evaluation_metrics/empirical_coverage_{distribution}_{regularization}_nc{percentage}_ts{time_span}.csv'
+if distribution == 'point':
+    ec_path_output = f'../Results/Evaluation_metrics/empirical_coverage_{distribution}_nc{percentage}_ts{time_span}.csv'
+else:
+    ec_path_output = f'../Results/Evaluation_metrics/empirical_coverage_{distribution}_{regularization}_nc{percentage}_ts{time_span}.csv'
 
 # save CRPS dataframe
 ec_df.to_csv(ec_path_output)
