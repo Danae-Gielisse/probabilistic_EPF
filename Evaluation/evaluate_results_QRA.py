@@ -5,7 +5,7 @@ from scipy.stats import chi2
 import os
 
 # choose time span, alpha and nominal coverage
-time_span = 2
+time_span = 1
 alpha = 0.25 # choose 0, 0.25, 0.5 or 0.75
 percentage = 0.5
 
@@ -96,14 +96,28 @@ if alpha != 0:
 df_mean_CRPS = pd.DataFrame(index=['CRPS'])
 for i in range(0, len(forecast_list)):
     CRPS_df = create_CRPS_matrix(forecast_list[i])
-    average_CPRS = CRPS_df['average_pinball_score_day'].mean()
+    average_CRPS = CRPS_df['average_pinball_score_day'].mean()
     lambda_value = LAMBDA[i]
     print('lambda value ' + str(lambda_value) + ' done')
-    df_mean_CRPS[str(lambda_value)] = average_CPRS
+    df_mean_CRPS[str(lambda_value)] = average_CRPS
 # add BIC result to CRPS_df
 df_mean_CRPS['BIC'] = average_CRPS_BIC
 if alpha != 0:
     df_mean_CRPS['EQRA(BIC)'] = average_CRPS_EQRA
+
+method_list = ["qrm", "q_Ens"]
+results = []
+for method in method_list:
+    if method == "qrm":
+        forecast = pd.read_csv(f"../Results/probabilistic_forecasts_time_span_{time_span}/forecast_qrm.csv")
+    else:
+        forecast = pd.read_csv(f"../Results/probabilistic_forecasts_time_span_{time_span}/q_Ens_forecast.csv")
+    CRPS_df = create_CRPS_matrix(forecast)
+    average_CRPS = CRPS_df['average_pinball_score_day'].mean()
+
+    results.append({'method': method, 'average_CRPS': average_CRPS})
+results_df = pd.DataFrame(results)
+results_df.to_csv(f"../Results/Evaluation_metrics/CRPS_stat_ts{time_span}.csv", index=False)
 
 # save CPRS dataframe
 df_mean_CRPS.to_csv(cprs_path)
@@ -179,11 +193,13 @@ def kupiec_test(emperical_coverage_list, confidence_level):
 
     return p_value
 
-"""
+
 kupiec_results = []
-LAMBDA = np.append(LAMBDA, -1)# for BIC
+kupiec_results_bench = []
+LAMBDA = np.append(LAMBDA, -1) # for BIC
 for significance_level in significance_levels:
     level_results = []
+    level_results_bench = []
     for lambda_value in LAMBDA:
         if lambda_value == -1: # then BIC forecast needed
             if alpha != 0:
@@ -216,12 +232,41 @@ for significance_level in significance_levels:
     # append the level results to the kupiec_list
     kupiec_results.append(level_results)
 
+    method_list = ['qrm', 'q_Ens']
+    for method in method_list:
+        if method == "qrm":
+            forecast = pd.read_csv(f"../Results/probabilistic_forecasts_time_span_{time_span}/forecast_qrm.csv", index_col=0)
+        else:
+            forecast = pd.read_csv(f"../Results/probabilistic_forecasts_time_span_{time_span}/q_Ens_forecast.csv")
+
+        # perform kupiec test
+        number_of_passes_dict = {}
+        # perform the kupiec test for all 24 hours
+        kupiec_list_bench = []
+        for hour in range(0, 24):
+            ec_hour, coverage_list_hour = empirical_coverage_hour(forecast, percentage, hour)
+            kupiec = kupiec_test(coverage_list_hour, 1 - percentage)
+            kupiec_list_bench.append(kupiec)
+
+        # count number of passes
+        number_of_passes = 0
+        for j in kupiec_list_bench:
+            if j <= significance_level:
+                number_of_passes += 1
+        level_results_bench.append(number_of_passes)
+
+    # append the level results to the kupiec_list
+    kupiec_results_bench.append(level_results_bench)
+
 # create df with number of passes for each run
 kupiec_df = pd.DataFrame(kupiec_results, columns=LAMBDA, index=[f"sig_{sl}" for sl in significance_levels])
 kupiec_df = kupiec_df.rename(columns={'-1': 'BIC'})
 
-# save dataframe
+kupiec_df_bench = pd.DataFrame(kupiec_results_bench, columns=method_list, index=[f"sig_{sl}" for sl in significance_levels])
+
+# save dataframes
 kupiec_df.to_csv(kupiec_output_path)
+kupiec_df_bench.to_csv(f'../Results/Evaluation_metrics/kupiec_passes_stat_nc{percentage}_ts{time_span}.csv')
 
 coverage_results = []
 for lambda_value in LAMBDA:
@@ -241,11 +286,23 @@ for lambda_value in LAMBDA:
     # add coverage to results list
     coverage_results.append(coverage)
 
+coverage_results_bench = []
+method_list = ['qrm', 'q_Ens']
+for method in method_list:
+    if method == "qrm":
+        forecast = pd.read_csv(f"../Results/probabilistic_forecasts_time_span_{time_span}/forecast_qrm.csv")
+    else:
+        forecast = pd.read_csv(f"../Results/probabilistic_forecasts_time_span_{time_span}/q_Ens_forecast.csv")
+    # calculate empirical coverage
+    coverage_bench, _ = empirical_coverage(forecast, percentage)
+    # add coverage to results list
+    coverage_results_bench.append(coverage)
+
 # create results dataframe
 ec_df = pd.DataFrame([coverage_results], columns=LAMBDA)
 ec_df = ec_df.rename(columns={'-1': 'BIC'})
+ec_df_bench = pd.DataFrame([coverage_results_bench], columns=method_list)
 
 # save CRPS dataframe
 ec_df.to_csv(ec_path_output)
-
-"""
+ec_df_bench.to_csv(f'../Results/Evaluation_metrics/emperical_coverage_stat_nc{percentage}_ts{time_span}')
