@@ -13,15 +13,15 @@ be run. The result of the preprocessing is made available
 in the Data folder.
 
 ## Obtaining probabilistic electricity price forecasts
-# Statistical time series methods
+### Statistical time series methods
 1. run point_forecasting_QRA.py to obtain the point forecasts for the QRA methods. This is the same for both LQRA and 
 EQRA. Adjust this to the needed time span.
 2. run QRA_regularized.py to obtain the quantiles of the probabilistic forecasting for every lambda for both LQRA and 
 EQRA. Adjust this to the needed time span.
 3. run BIC.py to obtain the quantiles of the probabilistic forecasting for LQRA(BIC) and EQRA(BIC-alpha).
 
-# Neural network based methods
+### Neural network based methods
 
-# Benchmarks
+### Benchmarks
 
 ## Evaluation of (probabilistic) electricity price forecasts 
