@@ -73,7 +73,7 @@ def aggregate_horizontal(df_list_per):
     return average_df
 
 
-# Perform Stat-q_ens
+# perform Stat-q_ens
 forecast_list = []
 qr_list = []
 for win in WIN:
@@ -92,6 +92,10 @@ for win in WIN:
 
 q_ens = aggregate_horizontal(qr_list)
 q_ens.to_csv(f'../Results/probabilistic_forecasts_time_span_{time_span}/q_Ens_forecast.csv')
+
+# perform Stat-QRM
+qrm_result = perform_qrm(forecast_list)
+qrm_result.to_csv(f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_qrm.csv')
 
 
 
