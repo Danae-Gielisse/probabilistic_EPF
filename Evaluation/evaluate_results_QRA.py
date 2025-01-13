@@ -125,7 +125,7 @@ df_mean_CRPS.to_csv(cprs_path)
 
 ### methods for computing emperical coverage ###
 '''
-computes the emperical coverage for a forecast dataframe for a certain percentage
+computes the empirical coverage for a forecast dataframe for a certain percentage
 '''
 def empirical_coverage(forecast, percentage):
     lowerbound_quantile = int(round(((1-percentage) / 2) * 100))
@@ -146,7 +146,7 @@ def empirical_coverage(forecast, percentage):
 
 
 '''
-computes the emperical coverage for a specific hour
+computes the empirical coverage for a specific hour
 '''
 def empirical_coverage_hour(forecast, percentage, hour):
     idx = np.arange(hour, len(forecast), 24)
