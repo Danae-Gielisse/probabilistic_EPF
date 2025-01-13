@@ -2,7 +2,7 @@
 Code based on matlab code from Uniejewski, B., & Weron, R. (2021).
 Regularized quantile regression averaging for probabilistic electricity price forecasting. Energy Economics, 95, 105121.
 
-Computation of the probabilistic forecasts for the QRA methods
+Perform DNN-QRA
 """
 
 
@@ -10,8 +10,6 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import linprog
 import os
-import pickle
-from joblib import Parallel, delayed
 
 # choose time span and regularization
 time_span = 2
