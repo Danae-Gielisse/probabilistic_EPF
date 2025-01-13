@@ -21,7 +21,22 @@ EQRA. Adjust this to the needed time span.
 3. run BIC.py to obtain the quantiles of the probabilistic forecasting for LQRA(BIC) and EQRA(BIC-alpha).
 
 ### Neural network based methods
+1. run nn_ht_point.py, nn_ht_lasso.py, and nn_ht_enet.py for run 1, 2, 3 and 4 to obtain the best hyperparameter sets
+for de DNN, DDNN-L and DDNN-E respectively. 
+2. run nn_forecasting.py to obtain point forecasts and forecasts of the distribution parameters.
+3. run params_to_percentile.py to convert the distribution parameters in 99 percentiles forecasts.
+4. run ensemble.py to do the vertical- and horizontal aggregration.
 
 ### Benchmarks
+1. run naive.py to create forecasts with the naive method.
+2. run stat_benchmarks.py to create forecasts for Stat-QRM and Stat-qEns
+3. run QRA_nn.py to create forecasts for DNN-QRA
+4. run QRM_nn.py to create forecasts for DNN-QRM
 
 ## Evaluation of (probabilistic) electricity price forecasts 
+- run evaluate_point_forecasts.py to obtain the MAE and the RMSE for all the methods.
+- run evaluate_results_nn.py to calculate the CRPS, get the empirical coverage and perform the kupiec test for the
+Neural Network based methods. 
+- run evaluate_results_QRA.py to calculate the CRPS, get the empirical coverage and perform the kupiec test for the 
+statistical time series based methods. 
+- run evaluation_graphs.py to obtain graphs of the results. 
