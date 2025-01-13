@@ -72,7 +72,8 @@ def aggregate_horizontal(df_list_per):
 
     return average_df
 
-# Perform Stat-QRM
+
+# Perform Stat-q_ens
 forecast_list = []
 qr_list = []
 for win in WIN:
