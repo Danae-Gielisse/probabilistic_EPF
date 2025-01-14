@@ -16,7 +16,7 @@ else:
 percentage = 0.5
 significance_levels = [0.01, 0.05, 0.1]
 
-'''
+
 def create_CRPS_matrix(forecast):
     number_of_days = int(round(len(forecast) / 24))
     crps_df = pd.DataFrame(index=range(0, number_of_days), columns=range(0, 24))
@@ -32,6 +32,7 @@ def create_CRPS_matrix(forecast):
     crps_df['average_pinball_score_day'] = crps_df.mean(axis=1)
 
     return crps_df
+
 
 def CRPS(day, hour, forecast):
     # average over all tau's, to calculate the average pinball score
@@ -92,7 +93,7 @@ else: # if distribution equals point
 
     # save CRPS dataframe
     CRPS_df.to_csv(crps_path_output)
-'''
+
 
 
 ### methods for computing emperical coverage ###
