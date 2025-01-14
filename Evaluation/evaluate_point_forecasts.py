@@ -110,6 +110,13 @@ for time_span in time_span_list:
     mae, rmse = forecast_to_point_error(forecast)
     append_to_results(time_span, None, 'QRM', None, mae, rmse)
 
+    # calculate mae and rmse for ensembles
+    ensemble_list = ['lasso', 'enet', 'lasso_weighted']
+    for ens in ensemble_list:
+        forecast = pd.read_csv(f'../Results/probabilistic_forecasts_time_span_{time_span}/forecast_stat_nn_ens_{ens}.csv')
+        mae, rmse = forecast_to_point_error(forecast)
+        append_to_results(time_span, 'ens', ens, None, mae, rmse)
+
 # Convert the results list to a DataFrame
 results_df = pd.DataFrame(results)
 
