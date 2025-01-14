@@ -1,0 +1,4 @@
+,lasso,enet,lasso_weighted
+sig_0.01,20,11,10
+sig_0.05,21,16,16
+sig_0.1,23,16,18
