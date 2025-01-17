@@ -15,9 +15,9 @@ in the Data folder.
 ## Obtaining probabilistic electricity price forecasts
 ### Statistical time series methods
 1. run point_forecasting_QRA.py to obtain the point forecasts for the QRA methods. This is the same for both LQRA and 
-EQRA. Adjust this to the needed time span.
+EQRA.
 2. run QRA_regularized.py to obtain the quantiles of the probabilistic forecasting for every lambda for both LQRA and 
-EQRA. Adjust this to the needed time span.
+EQRA.
 3. run BIC.py to obtain the quantiles of the probabilistic forecasting for LQRA(BIC) and EQRA(BIC-alpha).
 
 ### Neural network based methods
@@ -27,11 +27,14 @@ for de DNN, DDNN-L and DDNN-E respectively.
 3. run params_to_percentile.py to convert the distribution parameters in 99 percentiles forecasts.
 4. run ensemble.py to do the vertical- and horizontal aggregration.
 
+### Ensembles
+1. run stat_nn_ens.py to obtain the quantiles of the probabilistic forecasts for the ensembles
+
 ### Benchmarks
 1. run naive.py to create forecasts with the naive method.
-2. run stat_benchmarks.py to create forecasts for Stat-QRM and Stat-qEns
-3. run QRA_nn.py to create forecasts for DNN-QRA
-4. run QRM_nn.py to create forecasts for DNN-QRM
+2. run stat_benchmarks.py to create forecasts for Stat-QRM and Stat-qEns.
+3. run QRA_nn.py to create forecasts for DNN-QRA.
+4. run QRM_nn.py to create forecasts for DNN-QRM.
 
 ## Evaluation of (probabilistic) electricity price forecasts 
 - run evaluate_point_forecasts.py to obtain the MAE and the RMSE for all the methods.
@@ -39,4 +42,6 @@ for de DNN, DDNN-L and DDNN-E respectively.
 Neural Network based methods. 
 - run evaluate_results_QRA.py to calculate the CRPS, get the empirical coverage and perform the kupiec test for the 
 statistical time series based methods. 
+- run evaluate_results_ens.py to calculate the CRPS, get het empirical coverage and perform the kupiec test for the 
+ensemble methods.
 - run evaluation_graphs.py to obtain graphs of the results. 
