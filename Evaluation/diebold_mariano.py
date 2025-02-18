@@ -157,18 +157,3 @@ plt.tight_layout()
 
 # plot the figure
 plt.show()
-'''
-index_col_methods = ['q_Ens', 'qrm', 'point_qrm', 'BIC', 'BIC_alpha_0.25', 'BIC_alpha_0.5', 'BIC_alpha_0.75',
-                     'jsu1_lasso', 'jsu2_lasso', 'jsu3_lasso', 'jsu4_lasso', 'jsupEns_lasso', 'jsuqEns_lasso',
-                     'jsu1_enet', 'jsu2_enet', 'jsu3_enet', 'jsu4_enet', 'jsupEns_enet', 'jsuqEns_enet',
-                     'stat_nn_ens_enet', 'stat_nn_ens_lasso', 'stat_nn_ens_lasso_weighted']
-
-CRPS_matrix_A = create_CRPS_matrix(forecast_A)
-CRPS_matrix_B = create_CRPS_matrix(forecast_B)
-
-dt_vector = compute_vector_dt(CRPS_matrix_A, CRPS_matrix_B)
-dm_stat, p_value = dm_test(dt_vector)
-print(p_value)
-print(dm_stat)
-'''
-
