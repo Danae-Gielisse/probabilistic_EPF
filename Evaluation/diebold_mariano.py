@@ -87,6 +87,7 @@ def load_forecast(method):
     return forecast
 
 
+# choose time span
 time_span = 1
 no_index_col_methods = ['lambda_0.0', 'point_qra']
 
@@ -107,10 +108,10 @@ nn_methods = ['point_qra', 'point_qrm', 'jsu1_lasso', 'jsu2_lasso', 'jsu3_lasso'
 '''
 crps_matrices = {method: create_CRPS_matrix(load_forecast(method)) for method in methods}
 
-with open("crps_matrices.pkl", "wb") as f:
+with open(f"crps_matrices_ts{time_span}.pkl", "wb") as f:
     pickle.dump(crps_matrices, f)
 '''
-with open("crps_matrices.pkl", "rb") as f:
+with open(f"crps_matrices_ts{time_span}.pkl", "rb") as f:
     crps_matrices = pickle.load(f)
 
 # Initialise p-value matrix and insert zero's
@@ -150,7 +151,7 @@ for i in range(len(p_value_matrix)):
 # define labels
 plt.xticks(rotation=45, ha='right', fontsize=9)
 plt.yticks(fontsize=9)
-plt.title("Heatmap Diebold-Mariano test", fontsize=14)
+plt.title(f"Heatmap Diebold-Mariano test time span {time_span}", fontsize=14)
 
 # give the labels space
 plt.tight_layout()
