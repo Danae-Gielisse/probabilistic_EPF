@@ -4,7 +4,7 @@ import statistics
 from scipy.stats import chi2
 
 # choose time span, regularization and distribution
-time_span = 2
+time_span = 1
 
 # choose nominal coverage
 percentage = 0.5
@@ -67,7 +67,6 @@ crps_path_output = f'../Results/Evaluation_metrics/CRPS_stat_nn_ens_ts{time_span
 
 # save CRPS dataframe
 CRPS_df.to_csv(crps_path_output)
-
 
 
 ### methods for computing emperical coverage ###
@@ -142,6 +141,7 @@ def kupiec_test(emperical_coverage_list, confidence_level):
 
 
 kupiec_results = []
+run_list = ['lasso', 'enet', 'lasso_weighted']
 
 for significance_level in significance_levels:
     level_results = []
@@ -153,10 +153,14 @@ for significance_level in significance_levels:
         number_of_passes_dict = {}
         # perform the kupiec test for all 24 hours
         kupiec_list = []
+        ec_hour_list = []
         for hour in range(0, 24):
             ec_hour, coverage_list_hour = empirical_coverage_hour(forecast, percentage, hour)
             kupiec = kupiec_test(coverage_list_hour, 1-percentage)
             kupiec_list.append(kupiec)
+
+        df_ec_kupiec = pd.DataFrame([ec_hour_list, kupiec_list])
+        df_ec_kupiec.to_csv(f'../Results/Evaluation_metrics/ec_kupiec_dfs/ens_{run}_ts{time_span}.csv')
 
         # count number of passes
         number_of_passes = 0
