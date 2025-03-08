@@ -238,10 +238,14 @@ def objective(trial):
 
 # begin optuna study
 optuna.logging.get_logger('optuna').addHandler(logging.StreamHandler(sys.stdout))
-study_name = f'FINAL_NL_selection_prob_{distribution.lower()}{run}_ts{time_span}'
+study_name = f'FINAL_NL_selection_prob_{distribution.lower()}{run}_ts{time_span}_test'
 storage_name = f'sqlite:///../Results/hyperparameter_tuning/{study_name}'
 study = optuna.create_study(study_name=study_name, storage=storage_name, load_if_exists=True)
 study.optimize(objective, n_trials=350, show_progress_bar=True)
+df = study.trials_dataframe()
+print(df)
 best_params = study.best_params
+
 print(best_params)
-print(study.trials_dataframe())
+best_params_df = pd.DataFrame([best_params])
+#print(study.trials_dataframe())

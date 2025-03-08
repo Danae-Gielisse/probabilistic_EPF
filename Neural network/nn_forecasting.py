@@ -20,8 +20,8 @@ import tf_keras as tfk
 
 # choose run, time span and regularization
 run = 1
-time_span = 2
-regularization = 'enet' # choose lasso or enet
+time_span = 1
+regularization = 'lasso' # choose lasso or enet
 
 # choose distribution
 distribution = 'JSU'

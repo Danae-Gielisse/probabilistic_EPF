@@ -21,7 +21,7 @@ import tf_keras as tfk
 
 # choose run and time span
 run = 1
-time_span = 2
+time_span = 1
 
 # choose distribution
 distribution = 'JSU'
@@ -261,5 +261,6 @@ storage_name = f'sqlite:///../Results/hyperparameter_tuning/{study_name}'
 study = optuna.create_study(study_name=study_name, storage=storage_name, load_if_exists=True)
 study.optimize(objective, n_trials=175, show_progress_bar=True)
 best_params = study.best_params
+best_params_df = pd.DataFrame([best_params])
 print(best_params)
 print(study.trials_dataframe())
