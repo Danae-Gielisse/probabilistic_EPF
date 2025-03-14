@@ -40,6 +40,41 @@ axs[2].set_xlabel('Date')
 axs[2].set_ylabel('Price [EUR/tCO2]', labelpad=20)
 axs[2].grid(True)
 
+# create plots for the day-ahead prices on winter and summer days in time span 1 and time span 2
+dates_2019 = ["2019-01-25", "2019-07-29"]
+dates_2024 = ["2024-01-25", "2024-07-29"]
+dates = dates_2019 + dates_2024
+colors = [color_1, color_2, color_3, color_4]
+filtered_data_2019 = data[data["datetime"].dt.date.isin(pd.to_datetime(dates_2019).date)]
+filtered_data_2024 = data[data["datetime"].dt.date.isin(pd.to_datetime(dates_2024).date)]
+y_min_2019, y_max_2019 = filtered_data_2019["price"].min(), filtered_data_2019["price"].max()
+y_min_2024, y_max_2024 = filtered_data_2024["price"].min(), filtered_data_2024["price"].max()
+y_min_all = min(y_min_2019, y_min_2024)
+y_max_all = max(y_max_2019, y_max_2024)
+
+fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(8.27, 11.69))  # A4 size in inches (21x29.7 cm)
+
+for ax, date, color in zip(axes, dates, colors):
+    df_filtered = data[data["datetime"].dt.date == pd.to_datetime(date).date()]
+    df_filtered["hour"] = df_filtered["datetime"].dt.hour
+    '''
+    if date in dates_2019:
+        ax.set_ylim(y_min_2019, y_max_2019)
+    else:
+        ax.set_ylim(y_min_2024, y_max_2024)
+    '''
+    ax.set_ylim(y_min_all, y_max_all)
+    ax.plot(df_filtered["hour"], df_filtered["price"], linestyle='-', color=color)
+    ax.set_title(f"Day-ahead electricity price for the EPEX-NL market on {date}")
+    ax.set_xlabel("Hour")
+    ax.set_ylabel("day-ahead electricity price", fontsize=9)
+    ax.set_xlim(0, 23)
+    ax.grid(True)
+
+plt.tight_layout()
+plt.savefig('day-ahead price plots winter and summer.png', dpi=300)
+plt.show()
+
 # ensure the x-axis labels do not overlap and everything fits well
 plt.xticks(rotation=45)
 plt.tight_layout()
