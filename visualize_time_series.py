@@ -40,6 +40,15 @@ axs[2].set_xlabel('Date')
 axs[2].set_ylabel('Price [EUR/tCO2]', labelpad=20)
 axs[2].grid(True)
 
+# ensure the x-axis labels do not overlap and everything fits well
+plt.xticks(rotation=45)
+plt.tight_layout()
+fig.tight_layout(pad=2.0)
+plt.subplots_adjust(top=0.95, bottom=0.1)
+
+# show the graphs
+plt.show()
+
 # create plots for the day-ahead prices on winter and summer days in time span 1 and time span 2
 dates_2019 = ["2019-01-25", "2019-07-29"]
 dates_2024 = ["2024-01-25", "2024-07-29"]
@@ -75,14 +84,52 @@ plt.tight_layout()
 plt.savefig('day-ahead price plots winter and summer.png', dpi=300)
 plt.show()
 
-# ensure the x-axis labels do not overlap and everything fits well
-plt.xticks(rotation=45)
-plt.tight_layout()
-fig.tight_layout(pad=2.0)
-plt.subplots_adjust(top=0.95, bottom=0.1)
+# Bepaal de datums van de laatste week van juli
+dates_2019 = pd.date_range("2019-07-25", "2019-07-31", freq="D")
+dates_2024 = pd.date_range("2024-07-25", "2024-07-31", freq="D")
 
-# show the graphs
+# Filter de data voor de laatste week van juli in zowel 2019 als 2024
+filtered_data_2019 = data[data["datetime"].dt.date.isin(dates_2019.date)]
+filtered_data_2024 = data[data["datetime"].dt.date.isin(dates_2024.date)]
+
+# Bepaal de globale y_min en y_max over beide datasets
+y_min_all = min(filtered_data_2019["price"].min(), filtered_data_2024["price"].min())
+y_max_all = max(filtered_data_2019["price"].max(), filtered_data_2024["price"].max())
+
+# Maak de figuur en subplots (2 rijen, 1 kolom)
+fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(8.27, 5.85))  # Halve A4 formaat (8.27x5.85 inches)
+
+# Plot voor 2019
+ax = axes[0]
+df_filtered_2019 = filtered_data_2019
+ax.set_ylim(y_min_all - 5, y_max_all + 5)
+ax.set_xlim(df_filtered_2019["datetime"].min(), df_filtered_2019["datetime"].max())
+ax.plot(df_filtered_2019["datetime"], df_filtered_2019["price"], linestyle='-', color=color_1)
+ax.set_title("Day-ahead electricity price for the EPEX-NL market (2019, last week of July)")
+ax.set_xlabel("Date")
+ax.set_ylabel("Day-ahead electricity price", fontsize=9)
+ax.grid(True)
+
+# Plot voor 2024
+ax = axes[1]
+df_filtered_2024 = filtered_data_2024
+ax.set_ylim(y_min_all - 5, y_max_all+5)
+ax.set_xlim(df_filtered_2024["datetime"].min(), df_filtered_2024["datetime"].max())
+ax.plot(df_filtered_2024["datetime"], df_filtered_2024["price"], linestyle='-', color=color_2)
+ax.set_title("Day-ahead electricity price for the EPEX-NL market (2024, last week of July)")
+ax.set_xlabel("Date")
+ax.set_ylabel("Day-ahead electricity price", fontsize=9)
+ax.grid(True)
+
+# Zorg ervoor dat de layout netjes is
+plt.tight_layout()
+
+# Sla de plot op als PNG
+plt.savefig('day-ahead_price_plots_last_week_of_july_half_A4.png', dpi=300)
+
+# Toon de plot
 plt.show()
+
 
 # create a new column 'date' to obtain the date without time component
 data['date'] = data['datetime'].dt.date
