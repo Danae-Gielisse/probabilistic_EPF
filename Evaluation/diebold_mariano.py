@@ -1,3 +1,7 @@
+"""
+Code for performing the diebold mariano test to compare the CRPS of all methods.
+"""
+
 import pandas as pd
 import numpy as np
 import statistics
@@ -88,7 +92,7 @@ def load_forecast(method):
 
 
 # choose time span
-time_span = 1
+time_span = 2
 no_index_col_methods = ['lambda_0.0', 'point_qra']
 
 methods = ['QRA', 'Stat-qEns', 'Stat-QRM', 'DNN-QRA', 'DNN-QRM', 'LQRA(BIC)', 'EQRA(BIC-0.25)', 'EQRA(BIC-0.5)',
@@ -99,7 +103,7 @@ methods = ['QRA', 'Stat-qEns', 'Stat-QRM', 'DNN-QRA', 'DNN-QRM', 'LQRA(BIC)', 'E
 method_names = ['lambda_0.0', 'q_Ens', 'qrm', 'point_qra', 'point_qrm', 'BIC', 'BIC_alpha_0.25',
                 'BIC_alpha_0.5', 'BIC_alpha_0.75', 'jsu1_lasso', 'jsu2_lasso', 'jsu3_lasso', 'jsu4_lasso',
                 'jsupEns_lasso', 'jsuqEns_lasso', 'jsu1_enet', 'jsu2_enet', 'jsu3_enet', 'jsu4_enet', 'jsupEns_enet',
-                'jsuqEns_enet', 'stat_nn_ens_enet', 'stat_nn_ens_lasso', 'stat_nn_ens_lasso_weighted']
+                'jsuqEns_enet', 'stat_nn_ens_lasso', 'stat_nn_ens_enet', 'stat_nn_ens_lasso_weighted']
 
 stat_methods = ['lambda_0.0', 'qrm', 'BIC', 'BIC_alpha_0.25', 'BIC_alpha_0.5', 'BIC_alpha_0.75', 'stat_nn_ens_enet',
                 'stat_nn_ens_lasso', 'stat_nn_ens_lasso_weighted']
@@ -155,6 +159,9 @@ plt.title(f"Heatmap Diebold-Mariano test time span {time_span}", fontsize=14)
 
 # give the labels space
 plt.tight_layout()
+
+# save the figure
+plt.savefig(f"heatmap_DM_test_ts{time_span}.png", dpi=300, bbox_inches="tight")
 
 # plot the figure
 plt.show()
