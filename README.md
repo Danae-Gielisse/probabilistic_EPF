@@ -25,7 +25,7 @@ EQRA.
 for de DNN, DDNN-L and DDNN-E respectively. 
 2. run nn_forecasting.py to obtain point forecasts and forecasts of the distribution parameters.
 3. run params_to_percentile.py to convert the distribution parameters in 99 percentiles forecasts.
-4. run ensemble.py to do the vertical- and horizontal aggregration.
+4. run ensemble.py to perform the vertical and horizontal aggregration.
 
 ### Ensembles
 1. run stat_nn_ens.py to obtain the quantiles of the probabilistic forecasts for the ensembles
