@@ -1,3 +1,7 @@
+"""
+Calculate the mean absolute error (MAE) and root mean squared error of all methods.
+"""
+
 import pandas as pd
 import numpy as np
 
@@ -16,7 +20,6 @@ def forecast_to_point_error(forecast_df):
     forecasted_prices = forecast_df['Percentile_50']
     mae = calculate_mae(real_prices, forecasted_prices)
     rmse = calculate_rmse(real_prices, forecasted_prices)
-
     return mae, rmse
 
 
@@ -121,6 +124,3 @@ for time_span in time_span_list:
 results_df = pd.DataFrame(results)
 
 results_df.to_csv('../Results/Evaluation_metrics/point_forecasting_errors.csv', index=False)
-
-
-
