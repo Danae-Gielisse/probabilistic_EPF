@@ -1,3 +1,7 @@
+"""
+Creates forecasts of the ensemble methods
+"""
+
 import pandas as pd
 
 time_span = 2
@@ -68,4 +72,3 @@ output_folder_lasso_weighted = f'../Results/probabilistic_forecasts_time_span_{t
 stat_nn_ens_forecast_lasso.to_csv(output_folder_lasso)
 stat_nn_ens_forecast_enet.to_csv(output_folder_enet)
 stat_nn_ens_forecast_weighted.to_csv(output_folder_lasso_weighted)
-
