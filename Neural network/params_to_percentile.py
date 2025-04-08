@@ -1,3 +1,7 @@
+"""
+Changes the forecasts of the parameters of the Johnsons SU distribution to quantile forecasts
+"""
+
 import pandas as pd
 import numpy as np
 from scipy.stats import johnsonsu
