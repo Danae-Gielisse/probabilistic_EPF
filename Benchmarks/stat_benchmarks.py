@@ -1,3 +1,7 @@
+"""
+Creates forecasts of the Stat-QRM benchmark
+"""
+
 import pandas as pd
 from sklearn.linear_model import QuantileRegressor
 

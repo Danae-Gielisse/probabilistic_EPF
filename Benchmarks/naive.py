@@ -1,3 +1,7 @@
+"""
+Creates point forecasts of the naive benchmark
+"""
+
 import pandas as pd
 
 # choose time span
