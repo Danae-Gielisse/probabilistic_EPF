@@ -1,3 +1,7 @@
+"""
+Performs the horizontal and vertical aggregration of the four different runs
+"""
+
 import numpy as np
 from scipy.stats import johnsonsu
 import pandas as pd
