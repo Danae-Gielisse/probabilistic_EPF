@@ -1,3 +1,7 @@
+"""
+Calculates the CRPS and emperical coverage for the statistical time series methods. Also performs the kupiec test.
+"""
+
 import pandas as pd
 import numpy as np
 import statistics
@@ -6,7 +10,7 @@ import os
 
 # choose time span, alpha and nominal coverage
 time_span = 1
-alpha = 0.25 # choose 0, 0.25, 0.5 or 0.75
+alpha = 0 # choose 0, 0.25, 0.5 or 0.75
 percentage = 0.5
 
 significance_levels = [0.01, 0.05, 0.1]
@@ -122,7 +126,6 @@ results_df.to_csv(f"../Results/Evaluation_metrics/CRPS_stat_ts{time_span}.csv", 
 # save CPRS dataframe
 df_mean_CRPS.to_csv(cprs_path)
 
-
 ### methods for computing emperical coverage ###
 '''
 computes the empirical coverage for a forecast dataframe for a certain percentage
@@ -180,12 +183,12 @@ def kupiec_test(emperical_coverage_list, confidence_level):
 
     # calculate nominal coverage (c) and observed failure rate (π)
     c = 1 - confidence_level
-    pi = n1 / total_observations
+    pi = n0 / total_observations
 
     # compute the likelihood ratio (LR) statistic
     lr_uc = -2 * (
-            n0 * np.log(1 - c) + n1 * np.log(c) -
-            n0 * np.log(1 - pi) - n1 * np.log(pi)
+            n1 * np.log(1 - c) + n0 * np.log(c) -
+            n1 * np.log(1 - pi) - n0 * np.log(pi)
     )
 
     # compute the p-value
@@ -217,15 +220,28 @@ for significance_level in significance_levels:
         number_of_passes_dict = {}
         # perform the kupiec test for all 24 hours
         kupiec_list = []
+        ec_hour_list = []
         for hour in range(0, 24):
             ec_hour, coverage_list_hour = empirical_coverage_hour(forecast, percentage, hour)
-            kupiec = kupiec_test(coverage_list_hour, 1-percentage)
+            kupiec = kupiec_test(coverage_list_hour, percentage)
             kupiec_list.append(kupiec)
+            ec_hour_list.append(ec_hour)
 
+        if lambda_value == -1:
+            df_ec_kupiec = pd.DataFrame([ec_hour_list, kupiec_list])
+            if alpha == 0:
+                df_ec_kupiec.to_csv(f'../Results/Evaluation_metrics/ec_kupiec_dfs/LQRA(BIC)_nc{percentage}_ts{time_span}.csv')
+            else:
+                df_ec_kupiec.to_csv(f'../Results/Evaluation_metrics/ec_kupiec_dfs/EQRA(BIC-{alpha})_nc{percentage}_ts{time_span}.csv')
+
+        if lambda_value == LAMBDA[0]:
+            df_ec_kupiec = pd.DataFrame([ec_hour_list, kupiec_list])
+            if alpha == 0:
+                df_ec_kupiec.to_csv(f'../Results/Evaluation_metrics/ec_kupiec_dfs/LQRA(0)_nc{percentage}_ts{time_span}.csv')
         # count number of passes
         number_of_passes = 0
         for j in kupiec_list:
-            if j <= significance_level:
+            if j >= significance_level:
                 number_of_passes += 1
         level_results.append(number_of_passes)
 
@@ -243,15 +259,20 @@ for significance_level in significance_levels:
         number_of_passes_dict = {}
         # perform the kupiec test for all 24 hours
         kupiec_list_bench = []
+        ec_hour_list_bench = []
         for hour in range(0, 24):
             ec_hour, coverage_list_hour = empirical_coverage_hour(forecast, percentage, hour)
-            kupiec = kupiec_test(coverage_list_hour, 1 - percentage)
+            kupiec = kupiec_test(coverage_list_hour, percentage)
             kupiec_list_bench.append(kupiec)
+            ec_hour_list_bench.append(ec_hour)
+
+        df_ec_kupiec_bench = pd.DataFrame([ec_hour_list_bench, kupiec_list_bench])
+        df_ec_kupiec_bench.to_csv(f'../Results/Evaluation_metrics/ec_kupiec_dfs/Stat-{method}_nc{percentage}_ts{time_span}.csv')
 
         # count number of passes
         number_of_passes = 0
         for j in kupiec_list_bench:
-            if j <= significance_level:
+            if j >= significance_level:
                 number_of_passes += 1
         level_results_bench.append(number_of_passes)
 

@@ -1,10 +1,14 @@
+"""
+Calculates the CRPS and emperical coverage for the neural network methods. Also performs the kupiec test.
+"""
+
 import pandas as pd
 import numpy as np
 import statistics
 from scipy.stats import chi2
 
 # choose time span, regularization and distribution
-time_span = 1
+time_span = 2
 regularization = 'lasso' # choose lasso or enet
 distribution = 'point'
 if distribution == 'point':
@@ -95,7 +99,6 @@ else: # if distribution equals point
     CRPS_df.to_csv(crps_path_output)
 
 
-
 ### methods for computing emperical coverage ###
 '''
 computes the emperical coverage for a forecast dataframe for a certain percentage
@@ -153,12 +156,12 @@ def kupiec_test(emperical_coverage_list, confidence_level):
 
     # calculate nominal coverage (c) and observed failure rate (π)
     c = 1 - confidence_level
-    pi = n1 / total_observations
+    pi = n0 / total_observations
 
     # compute the likelihood ratio (LR) statistic
     lr_uc = -2 * (
-            n0 * np.log(1 - c) + n1 * np.log(c) -
-            n0 * np.log(1 - pi) - n1 * np.log(pi)
+            n1 * np.log(1 - c) + n0 * np.log(c) -
+            n1 * np.log(1 - pi) - n0 * np.log(pi)
     )
 
     # compute the p-value
@@ -187,20 +190,20 @@ for significance_level in significance_levels:
         ec_hour_list =[]
         for hour in range(0, 24):
             ec_hour, coverage_list_hour = empirical_coverage_hour(forecast, percentage, hour)
-            kupiec = kupiec_test(coverage_list_hour, 1-percentage)
+            kupiec = kupiec_test(coverage_list_hour, percentage)
             kupiec_list.append(kupiec)
             ec_hour_list.append(ec_hour)
 
         df_ec_kupiec = pd.DataFrame([ec_hour_list, kupiec_list])
         if distribution == 'jsu':
-            df_ec_kupiec.to_csv(f'../Results/Evaluation_metrics/ec_kupiec_dfs/{distribution}{run}_{regularization}_ts{time_span}.csv')
+            df_ec_kupiec.to_csv(f'../Results/Evaluation_metrics/ec_kupiec_dfs/{distribution}{run}_{regularization}_nc{percentage}_ts{time_span}.csv')
         else:
-            df_ec_kupiec.to_csv(f'../Results/Evaluation_metrics/ec_kupiec_dfs/{run}_ts{time_span}.csv')
+            df_ec_kupiec.to_csv(f'../Results/Evaluation_metrics/ec_kupiec_dfs/{run}_nc{percentage}_ts{time_span}.csv')
 
         # count number of passes
         number_of_passes = 0
         for j in kupiec_list:
-            if j <= significance_level:
+            if j >= significance_level:
                 number_of_passes += 1
         level_results.append(number_of_passes)
 
