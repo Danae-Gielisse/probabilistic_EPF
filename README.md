@@ -7,7 +7,7 @@ forecasting. Energy Economics, 125, 106843.
 forecasting. Energy Economics, 95, 105121.
 
 ## Preproces data
-The data from the ENSOE platform was not directly usable for analysis. Therefore, to prepare the data for probabilistic 
+The data from the ENSO-E platform was not directly usable for analysis. Therefore, to prepare the data for probabilistic 
 electricity price prediction, the data was first pre-processed. To preprocess the data, the file preprocess_data.py must
 be run. The result of the preprocessing is made available 
 in the Data folder.
@@ -18,7 +18,7 @@ in the Data folder.
 EQRA.
 2. run QRA_regularized.py to obtain the quantiles of the probabilistic forecasting for every lambda for both LQRA and 
 EQRA.
-3. run BIC.py to obtain the quantiles of the probabilistic forecasting for LQRA(BIC) and EQRA(BIC-alpha).
+3. run BIC.py to obtain the quantiles of the probabilistic forecasting for LQRA(BIC) and EQRA(BIC-gamma).
 
 ### Neural network based methods
 1. run nn_ht_point.py, nn_ht_lasso.py, and nn_ht_enet.py for run 1, 2, 3 and 4 to obtain the best hyperparameter sets
@@ -39,9 +39,15 @@ for de DNN, DDNN-L and DDNN-E respectively.
 ## Evaluation of (probabilistic) electricity price forecasts 
 - run evaluate_point_forecasts.py to obtain the MAE and the RMSE for all the methods.
 - run evaluate_results_nn.py to calculate the CRPS, get the empirical coverage and perform the kupiec test for the
-Neural Network based methods. 
+neural network-based methods. 
 - run evaluate_results_QRA.py to calculate the CRPS, get the empirical coverage and perform the kupiec test for the 
 statistical time series based methods. 
 - run evaluate_results_ens.py to calculate the CRPS, get het empirical coverage and perform the kupiec test for the 
 ensemble methods.
-- run evaluation_graphs.py to obtain graphs of the results. 
+- run evaluation_graphs.py to obtain graphs of the results.
+- run diebold_mariano.py to compute and visualize the diebold mariano p-values.
+
+## Profit of the different battery strategies
+- run battery.py to obtain the profit of each method for the naive strategy, unlimited strategy and every risk level of 
+the quantile based strategy. 
+- run battery_graph to plot the visualization graph which is stated in the methodology.
